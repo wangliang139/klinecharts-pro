@@ -17,7 +17,7 @@ import { Component, Show, onCleanup, onMount } from 'solid-js'
 import { Period, SymbolInfo } from '../../types'
 
 import i18n from '../../i18n'
-import { fullScreen, resolveRootNode, setFullScreen } from '../../store/chartStore'
+import { fullScreen, isChartRootFullscreen, resolveRootNode, setFullScreen } from '../../store/chartStore'
 
 export interface PeriodBarProps {
   locale: string
@@ -41,7 +41,8 @@ const PeriodBar: Component<PeriodBarProps> = props => {
     p.span === props.period.span && p.type === props.period.type
 
   const fullScreenChange = () => {
-    setFullScreen(full => !full)
+    // 不能对同一过渡用 toggle：部分浏览器会同时触发标准与前缀的 fullscreenchange，会连翻两次导致状态错误
+    setFullScreen(isChartRootFullscreen(ref))
   }
 
   onMount(() => {

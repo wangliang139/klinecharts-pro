@@ -39,6 +39,29 @@ export function resolveRootNode(fromNode?: Node | null): HTMLElement | null {
   return document.querySelector('.klinecharts-pro')
 }
 
+/** 当前处于全屏的节点（含各浏览器前缀），无则 null */
+export function getDocumentFullscreenElement (): Element | null {
+  const doc = document as Document & {
+    webkitFullscreenElement?: Element | null
+    mozFullScreenElement?: Element | null
+    msFullscreenElement?: Element | null
+  }
+  return (
+    doc.fullscreenElement ??
+    doc.webkitFullscreenElement ??
+    doc.mozFullScreenElement ??
+    doc.msFullscreenElement ??
+    null
+  )
+}
+
+/** 图表根节点是否正处于（或包含）文档全屏元素 */
+export function isChartRootFullscreen (fromNode?: Node | null): boolean {
+  const root = resolveRootNode(fromNode)
+  const fs = getDocumentFullscreenElement()
+  return !!(root && fs && (root === fs || root.contains(fs)))
+}
+
 export const [loadingVisible, setLoadingVisible] = createSignal(false)
 export const [symbol, setSymbol] = createSignal<Nullable<SymbolInfo>>(null)
 export const [period, setPeriod] = createSignal<Nullable<Period>>(null)

@@ -5,6 +5,7 @@
   @period-inline-divider-height: 16px;
   @period-selected-bg-inset-x: 6px;
   @period-selected-bg-inset-y: 4px;
+  @period-button-radius: 4px;
 
   display: flex;
   flex-direction: row;
@@ -124,6 +125,7 @@
     padding: 0 4px;
     margin: 0;
     border-right: none;
+    border-radius: @period-button-radius;
     position: relative;
     box-sizing: border-box;
     overflow: hidden;
@@ -131,6 +133,29 @@
     min-width: 0;
     // 避免继承 .item 的 transition: all，hover 时颜色/背景渐变被插值成「动画感」
     transition: none;
+    // 原生 button 会忽略或盖掉圆角；去掉默认外观后圆角与背景才一致生效
+    -webkit-appearance: none;
+    appearance: none;
+    isolation: isolate;
+
+    &::-moz-focus-inner {
+      border: 0;
+      padding: 0;
+    }
+
+    // 内缩圆角色块（比 background-size 渐变更易出清晰圆角）
+    &::after {
+      content: '';
+      position: absolute;
+      left: @period-selected-bg-inset-x;
+      right: @period-selected-bg-inset-x;
+      top: @period-selected-bg-inset-y;
+      bottom: @period-selected-bg-inset-y;
+      border-radius: @period-button-radius;
+      pointer-events: none;
+      z-index: -1;
+      background-color: transparent;
+    }
   }
 
   .tools.period + .tools.period::before {
@@ -143,32 +168,34 @@
     height: @period-inline-divider-height;
     background-color: var(--klinecharts-pro-border-color);
     pointer-events: none;
-  }
-
-  // 周期格：hover / 选中共用同一套内缩尺寸，避免整格铺色与选中块不一致
-  .tools-period-inset-fill(@fill) {
-    background-color: transparent !important;
-    background-image: linear-gradient(@fill, @fill);
-    background-size: calc(100% - (@period-selected-bg-inset-x * 2))
-      calc(100% - (@period-selected-bg-inset-y * 2));
-    background-position: center;
-    background-repeat: no-repeat;
-    border-radius: 4px;
+    z-index: 1;
   }
 
   .tools.period:hover:not(.selected) {
-    .tools-period-inset-fill(var(--klinecharts-pro-period-hover-background-color));
+    background-color: transparent !important;
     color: var(--klinecharts-pro-primary-color);
+
+    &::after {
+      background-color: var(--klinecharts-pro-period-hover-background-color);
+    }
   }
 
   .tools.period.selected {
-    .tools-period-inset-fill(var(--klinecharts-pro-selected-color));
+    background-color: transparent !important;
     color: var(--klinecharts-pro-primary-color);
+
+    &::after {
+      background-color: var(--klinecharts-pro-selected-color);
+    }
   }
 
   .tools.period.selected:hover {
-    .tools-period-inset-fill(var(--klinecharts-pro-selected-color));
+    background-color: transparent !important;
     color: var(--klinecharts-pro-primary-color);
+
+    &::after {
+      background-color: var(--klinecharts-pro-selected-color);
+    }
   }
 
   // 紧邻「周期」按钮之后的第一个非周期工具区（如指标），竖线分隔、无额外留空
