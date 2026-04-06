@@ -1,9 +1,9 @@
-import { createSignal, startTransition } from "solid-js";
-import { fullScreen, indicatorModalVisible, instanceapi, orderModalVisible, orderPanelVisible, periodModalVisible, rootlelID, screenshotUrl, setIndicatorModalVisible, setOrderPanelVisible, setPeriodModalVisible, setScreenshotUrl, setSettingModalVisible, settingModalVisible, theme } from "./chartStore";
-import { documentResize } from "./chartStateStore";
 import { Chart } from 'klinecharts';
-import { periodInputValue, setPeriodInputValue } from "../widget/timeframe-modal";
+import { createSignal, startTransition } from "solid-js";
 import { setInputClass } from "../component/input";
+import { setPeriodInputValue } from "../widget/timeframe-modal";
+import { documentResize } from "./chartStateStore";
+import { fullScreen, indicatorModalVisible, instanceApi, orderModalVisible, orderPanelVisible, periodModalVisible, rootlelID, screenshotUrl, setIndicatorModalVisible, setOrderPanelVisible, setPeriodModalVisible, setScreenshotUrl, setSettingModalVisible, settingModalVisible, theme } from "./chartStore";
 import { showOverlaySetting } from "./overlaySettingStore";
 
 export const [ctrlKeyedDown, setCtrlKeyedDown] = createSignal(false)
@@ -69,7 +69,7 @@ export const useKeyEvents = () => {
     } else if (event.key === 'ArrowDown') {
     } else if (event.key === 'ArrowUp') {
     } else if (event.key === 'Delete') {
-      instanceapi()?.removeOverlay()
+      instanceApi()?.removeOverlay()
     } else if (event.key === 'Escape') {
       //TODO: this should hide all modals
       setPeriodModalVisible(false)
@@ -121,7 +121,7 @@ const showOrderlist = async () => {
 }
 
 const takeScreenshot = () => {
-  const url = instanceapi()!.getConvertPictureUrl(true, 'jpeg', theme() === 'dark' ? '#151517' : '#ffffff')
+  const url = instanceApi()!.getConvertPictureUrl(true, 'jpeg', theme() === 'dark' ? '#151517' : '#ffffff')
   setScreenshotUrl(url)
 }
 

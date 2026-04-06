@@ -1,4 +1,4 @@
-import { Component, createSignal, createEffect, onMount, onCleanup } from "solid-js"
+import { Component, createEffect, createSignal, onCleanup, onMount, Show } from "solid-js"
 import { Modal } from '../../component'
 import './index.less'
 

@@ -1,12 +1,12 @@
 import { DeepPartial, Indicator, IndicatorCreate, IndicatorTooltipData, Nullable, Overlay, OverlayCreate, OverlayEvent, PaneOptions, TooltipFeatureStyle } from 'klinecharts'
-import { ChartObjType, OverlayProperties, ProChart, ProOverlay } from "../types"
 import loadash from "lodash"
+import { ChartObjType, OverlayProperties, ProChart, ProOverlay } from "../types"
+import { instanceApi, mainIndicators, PaneProperties, setChartModified, setMainIndicators, setSelectedOverlay, setStyles, setSubIndicators, subIndicators } from './chartStore'
 import { ctrlKeyedDown } from "./keyEventStore"
 import { overlayType, useOverlaySettings } from "./overlaySettingStore"
-import { instanceapi, mainIndicators, PaneProperties, setChartModified, setMainIndicators, setSelectedOverlay, setStyles, setSubIndicators, subIndicators } from './chartStore'
 
 export const documentResize = () => {
-  instanceapi()?.resize()
+  instanceApi()?.resize()
 }
 
 export const cleanup = async () => {   //Cleanup objects when leaving chart page
@@ -202,12 +202,12 @@ export const useChartState = () => {
   }
 
   const pushOverlay = (overlay: OverlayCreate & { properties?: DeepPartial<OverlayProperties> }, paneId?: string, redrawing = false) => {
-    const id = (instanceapi()?.createOverlay({ ...overlay, paneId }) as Nullable<string>)
+    const id = (instanceApi()?.createOverlay({ ...overlay, paneId }) as Nullable<string>)
 
     if (!id)
       return false
 
-    const ovrly = instanceapi()?.getOverlays({id: id})[0]
+    const ovrly = instanceApi()?.getOverlays({id: id})[0]
 
     const handleRightClick = (event: OverlayEvent<unknown>) => {
       if (event.preventDefault)
@@ -226,7 +226,7 @@ export const useChartState = () => {
       // const style = !redrawing && useGetOverlayStyle[`${ovrly.name}Style`] ? useGetOverlayStyle[`${ovrly.name}Style`]() : undefined
       if (overlay.properties)
       (ovrly as ProOverlay).setProperties(overlay.properties, id);
-      instanceapi()?.overrideOverlay({
+      instanceApi()?.overrideOverlay({
         id: ovrly.id,
         // styles: overlay.styles ?? style,
         onDrawEnd: (event) => {
@@ -260,7 +260,7 @@ export const useChartState = () => {
       localStorage.setItem(`chartstatedata`, JSON.stringify(chartObj))
       setChartModified(true)
     }
-    instanceapi()?.removeOverlay({id})
+    instanceApi()?.removeOverlay({id})
   }
 
   const modifyOverlay = (id: string, modifyInfo: Partial<OverlayCreate<unknown>>) => {
@@ -277,7 +277,7 @@ export const useChartState = () => {
       })
       localStorage.setItem(`chartstatedata`, JSON.stringify(chartObj))
       setChartModified(true)
-      instanceapi()?.overrideOverlay({ ...modifyInfo, id })
+      instanceApi()?.overrideOverlay({ ...modifyInfo, id })
     }
   }
 
@@ -292,7 +292,7 @@ export const useChartState = () => {
         }
         return overlay
       })
-      const ovrl = instanceapi()?.getOverlayById(id)
+      const ovrl = instanceApi()?.getOverlayById(id)
       if (ovrl) {
         (ovrl as ProOverlay).setProperties(properties, id)
       }
@@ -304,7 +304,7 @@ export const useChartState = () => {
   const pushMainIndicator = (data: IndicatorChageType) => {
     const newMainIndicators = [...mainIndicators()]
     if (data.added) {
-      createIndicator(instanceapi()!, data.name, true, { id: 'candle_pane' }, true)
+      createIndicator(instanceApi()!, data.name, true, { id: 'candle_pane' }, true)
       newMainIndicators.push(data.name)
     } else {
       popIndicator(data.name, 'candle_pane')
@@ -316,7 +316,7 @@ export const useChartState = () => {
   const pushSubIndicator = (data: IndicatorChageType) => {
     const newSubIndicators = { ...subIndicators() }
     if (data.added) {
-      const paneId = createIndicator(instanceapi()!, data.name, false, undefined, true)
+      const paneId = createIndicator(instanceApi()!, data.name, false, undefined, true)
       if (paneId) {
         // @ts-expect-error
         newSubIndicators[data.name] = paneId
@@ -346,12 +346,12 @@ export const useChartState = () => {
       })
       localStorage.setItem(`chartstatedata`, JSON.stringify(chartObj))
       setChartModified(true)
-      instanceapi()?.overrideIndicator({ name: modalParams.indicatorName, calcParams: params, paneId: modalParams.paneId })
+      instanceApi()?.overrideIndicator({ name: modalParams.indicatorName, calcParams: params, paneId: modalParams.paneId })
     }
   }
   const popIndicator = (id: string, name?: string, paneId?: string) => {
     const chartStateObj = localStorage.getItem(`chartstatedata`)
-    instanceapi()?.removeIndicator({ id, paneId, name })
+    instanceApi()?.removeIndicator({ id, paneId, name })
   
     if (chartStateObj) {
       let chartObj: ChartObjType = JSON.parse(chartStateObj)
@@ -408,7 +408,7 @@ export const useChartState = () => {
   
           chartObj.indicators!.forEach(indicator => {
             if (indicator.value) {
-              instanceapi()?.createIndicator(indicator.value, indicator.isStack, indicator.paneOptions)
+              instanceApi()?.createIndicator(indicator.value, indicator.isStack, indicator.paneOptions)
               if (indicator.paneOptions?.id === 'candle_pane') {
                 newMainIndicators.push(indicator.value.name)
               } else {

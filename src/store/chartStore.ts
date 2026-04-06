@@ -1,7 +1,7 @@
+import { Color } from "chroma-js"
+import { DeepPartial, Nullable, Styles } from "klinecharts"
 import { createSignal } from "solid-js"
 import { ChartDataLoaderType, ChartPro, ChartProOptions, Datafeed, Period, ProChart, ProOverlay, SymbolInfo } from "../types"
-import { DeepPartial, LineStyle, Nullable, Overlay, PathStyle, PolygonStyle, RectStyle, Styles } from "klinecharts"
-import { Color } from "chroma-js"
 
 export interface PaneProperties extends Styles {
   backgroundType: 'solid' | 'gradient'
@@ -30,7 +30,7 @@ export const [loadingVisible, setLoadingVisible] = createSignal(false)
 export const [symbol, setSymbol] = createSignal<Nullable<SymbolInfo>>(null)
 export const [period, setPeriod] = createSignal<Nullable<Period>>(null)
 export const [appBackgroundColor, setAppBackgroundColor] = createSignal<Color>()
-export const [instanceapi, setInstanceapi] = createSignal<Nullable<ProChart>>(null)
+export const [instanceApi, setInstanceApi] = createSignal<Nullable<ProChart>>(null)
 export const [styles, setStyles] = createSignal<Nullable<DeepPartial<PaneProperties>>>(null)
 
 export const [mainIndicators, setMainIndicators] = createSignal([''])

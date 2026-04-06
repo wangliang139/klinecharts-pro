@@ -12,9 +12,9 @@
  * limitations under the License.
  */
 
-import { KLineData, Styles, DeepPartial, Nullable, Chart, DataLoader, Period as DefaultPeriod, IndicatorCreate, PaneOptions, OverlayCreate, FigureCreate, PickRequired, OverlayFilter, Overlay } from 'klinecharts'
-import { OrderOverlay, OverlayProperties, ProOverlayCreate } from './overlayTypes'
+import { Chart, DataLoader, DeepPartial, Period as DefaultPeriod, FigureCreate, IndicatorCreate, KLineData, Nullable, Overlay, PaneOptions } from 'klinecharts'
 import { PaneProperties } from '../store/chartStore'
+import { OrderOverlay, ProOverlayCreate } from './overlayTypes'
 
 
 export type FontWeights = 'thin' | 'extra-light' | 'light' | 'normal' | 'medium' | 'semi-bold' | 'bold' | 'extra-bold' | 'black'

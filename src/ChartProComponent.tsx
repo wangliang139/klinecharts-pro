@@ -13,37 +13,50 @@
  */
 
 import {
-  createSignal, createEffect, onMount, Show,
-  onCleanup, startTransition, Component
+  Component,
+  createEffect,
+  createSignal,
+  onCleanup,
+  onMount, Show,
+  startTransition
 } from 'solid-js'
 
 import {
-  dispose, utils, OverlayMode, Styles, Indicator,
-  FormatDateParams, TooltipFeatureStyle
+  dispose,
+  FormatDateParams,
+  Indicator,
+  OverlayMode, Styles,
+  TooltipFeatureStyle,
+  utils
 } from 'klinecharts'
 
-import lodashSet from 'lodash/set'
 import lodashClone from 'lodash/cloneDeep'
+import lodashSet from 'lodash/set'
 
-import { SelectDataSourceItem, Loading, OverlayPopup } from './component'
+import { Loading, OverlayPopup, SelectDataSourceItem } from './component'
 
 import {
-  PeriodBar, DrawingBar, IndicatorModal, TimezoneModal, SettingModal,
-  ScreenshotModal, IndicatorSettingModal, SymbolSearchModal,
+  DrawingBar, IndicatorModal,
+  IndicatorSettingModal,
   OverlaySettingModal,
-  SettingsFloating
+  PeriodBar,
+  ScreenshotModal,
+  SettingModal,
+  SettingsFloating,
+  SymbolSearchModal,
+  TimezoneModal
 } from './widget'
 
 import { translateTimezone } from './widget/timezone-modal/data'
 
-import { SymbolInfo, Period } from './types/types'
 import Chart from './Chart'
-import {
-  ChartProComponentProps, instanceapi, loadingVisible, orderPanelVisible,
-  period, selectedOverlay, setInstanceapi, setPeriod, setRooltelId, setStyles, setSymbol, styles, symbol
-} from './store/chartStore'
 import { useChartState } from './store/chartStateStore'
+import {
+  ChartProComponentProps, instanceApi, loadingVisible, orderPanelVisible,
+  period, selectedOverlay, setInstanceApi, setPeriod, setRooltelId, setStyles, setSymbol, styles, symbol
+} from './store/chartStore'
 import { showOverlayPopup, showOverlaySetting } from './store/overlaySettingStore'
+import { Period, SymbolInfo } from './types/types'
 const { createIndicator, pushOverlay, restoreChartState } = useChartState()
 
 interface PrevSymbolPeriod {
@@ -94,18 +107,18 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
     getSymbol: () => symbol()!,
     setPeriod,
     getPeriod: () => period()!,
-    getInstanceApi: () => instanceapi(),
-    resize: () => instanceapi()?.resize(),
-    dispose: () => {}
+    getInstanceApi: () => instanceApi(),
+    resize: () => instanceApi()?.resize(),
+    dispose: () => { }
   })
 
   const documentResize = () => {
-    instanceapi()?.resize()
+    instanceApi()?.resize()
   }
 
   onMount(() => {
     window.addEventListener('resize', documentResize)
-    setInstanceapi(Chart.init(widgetRef!, {
+    setInstanceApi(Chart.init(widgetRef!, {
       formatter: {
         formatDate: (params: FormatDateParams) => {
           const p = period()!
@@ -142,10 +155,10 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
       }
     }))
 
-    if (instanceapi()) {
+    if (instanceApi()) {
       setRooltelId(props.rootElementId)
       console.info('ChartPro widget initialized')
-      const watermarkContainer = instanceapi()!.getDom('candle_pane', 'main')
+      const watermarkContainer = instanceApi()!.getDom('candle_pane', 'main')
       if (watermarkContainer) {
         let watermark = document.createElement('div')
         watermark.className = 'klinecharts-pro-watermark'
@@ -158,66 +171,66 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
         watermarkContainer.appendChild(watermark)
       }
 
-      const priceUnitContainer = instanceapi()!.getDom('candle_pane', 'yAxis')
+      const priceUnitContainer = instanceApi()!.getDom('candle_pane', 'yAxis')
       priceUnitDom = document.createElement('span')
       priceUnitDom.className = 'klinecharts-pro-price-unit'
       priceUnitContainer?.appendChild(priceUnitDom)
 
-      instanceapi()?.setZoomAnchor({ main: 'last_bar', xAxis: 'last_bar'})
-      instanceapi()?.setBarSpaceLimit({ max: 400 })
+      instanceApi()?.setZoomAnchor({ main: 'last_bar', xAxis: 'last_bar' })
+      instanceApi()?.setBarSpace(400)
 
-      instanceapi()?.subscribeAction('onCrosshairFeatureClick', (data) => {
+      instanceApi()?.subscribeAction('onCrosshairFeatureClick', (data) => {
         console.info('onCrosshairFeatureClick', data)
       })
 
-      instanceapi()?.subscribeAction('onIndicatorTooltipFeatureClick', (data) => {
+      instanceApi()?.subscribeAction('onIndicatorTooltipFeatureClick', (data) => {
         console.info('onIndicatorTooltipFeatureClick', data)
         const _data = data as { paneId: string, feature: TooltipFeatureStyle, indicator: Indicator }
         // if (_data.indicatorName) {
-          switch (_data.feature.id) {
-            case 'visible': {
-              instanceapi()?.overrideIndicator({ name: _data.indicator.name, visible: true, paneId: _data.paneId })
-              break
-            }
-            case 'invisible': {
-              instanceapi()?.overrideIndicator({ name: _data.indicator.name, visible: false, paneId: _data.paneId })
-              break
-            }
-            case 'setting': {
-              const indicator = instanceapi()?.getIndicators({ paneId: _data.paneId, name: _data.indicator.name, id: _data.indicator.id }).at(0)
-              if (!indicator) return
-              setIndicatorSettingModalParams({
-                visible: true, indicatorName: _data.indicator.name, paneId: _data.paneId, calcParams: indicator.calcParams
-              })
-              break
-            }
-            case 'close': {
-              if (_data.paneId === 'candle_pane') {
-                const newMainIndicators = [...mainIndicators()]
-                instanceapi()?.removeIndicator({ paneId: _data.paneId, name: _data.indicator.name, id: _data.indicator.id })
-                newMainIndicators.splice(newMainIndicators.indexOf(_data.indicator.name), 1)
-                setMainIndicators(newMainIndicators)
-              } else {
-                const newIndicators = { ...subIndicators() }
-                instanceapi()?.removeIndicator({ paneId: _data.paneId, name: _data.indicator.name, id: _data.indicator.id })
-                // @ts-expect-error
-                delete newIndicators[_data.indicator.name]
-                setSubIndicators(newIndicators)
-              }
+        switch (_data.feature.id) {
+          case 'visible': {
+            instanceApi()?.overrideIndicator({ name: _data.indicator.name, visible: true, paneId: _data.paneId })
+            break
+          }
+          case 'invisible': {
+            instanceApi()?.overrideIndicator({ name: _data.indicator.name, visible: false, paneId: _data.paneId })
+            break
+          }
+          case 'setting': {
+            const indicator = instanceApi()?.getIndicators({ paneId: _data.paneId, name: _data.indicator.name, id: _data.indicator.id }).at(0)
+            if (!indicator) return
+            setIndicatorSettingModalParams({
+              visible: true, indicatorName: _data.indicator.name, paneId: _data.paneId, calcParams: indicator.calcParams
+            })
+            break
+          }
+          case 'close': {
+            if (_data.paneId === 'candle_pane') {
+              const newMainIndicators = [...mainIndicators()]
+              instanceApi()?.removeIndicator({ paneId: _data.paneId, name: _data.indicator.name, id: _data.indicator.id })
+              newMainIndicators.splice(newMainIndicators.indexOf(_data.indicator.name), 1)
+              setMainIndicators(newMainIndicators)
+            } else {
+              const newIndicators = { ...subIndicators() }
+              instanceApi()?.removeIndicator({ paneId: _data.paneId, name: _data.indicator.name, id: _data.indicator.id })
+              // @ts-expect-error
+              delete newIndicators[_data.indicator.name]
+              setSubIndicators(newIndicators)
             }
           }
+        }
         // }
       })
 
-      instanceapi()?.subscribeAction('onCandleTooltipFeatureClick', (data) => {
+      instanceApi()?.subscribeAction('onCandleTooltipFeatureClick', (data) => {
         console.info('onCandleTooltipFeatureClick', data)
       })
 
-      instanceapi()?.subscribeAction('onZoom', (data) => {
+      instanceApi()?.subscribeAction('onZoom', (data) => {
         console.info('chart zoomed: ', data)
       })
 
-      instanceapi()?.subscribeAction('onCrosshairChange', (data) => {
+      instanceApi()?.subscribeAction('onCrosshairChange', (data) => {
         // console.info('crosshair change: ', data)
       })
       restoreChartState(props.overrides)
@@ -229,12 +242,12 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
       } else {
         priceUnitDom.style.display = 'none'
       }
-      instanceapi()?.setSymbol({ ticker: s!.ticker, pricePrecision: s?.pricePrecision ?? 2, volumePrecision: s?.volumePrecision ?? 0 })
-      instanceapi()?.setPeriod(period()!)
-      instanceapi()?.setDataLoader(props.dataloader)
+      instanceApi()?.setSymbol({ ticker: s!.ticker, pricePrecision: s?.pricePrecision ?? 2, volumePrecision: s?.volumePrecision ?? 0 })
+      instanceApi()?.setPeriod(period()!)
+      instanceApi()?.setDataLoader(props.dataloader)
     }
 
-    const w = instanceapi()
+    const w = instanceApi()
 
     if (w) {
       mainIndicators().forEach(indicator => {
@@ -267,15 +280,15 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
 
       if (prev?.period.span !== p!.span && prev?.period.type !== p!.type) {
         console.info('period changed: set period', p)
-        instanceapi()?.setPeriod(p!)
+        instanceApi()?.setPeriod(p!)
       }
       if (prev?.symbol?.ticker !== s!.ticker)
         console.info('ticker changed: set symbol', s)
-        instanceapi()?.setSymbol({
-          ticker: s!.ticker,
-          pricePrecision: s!.pricePrecision,
-          volumePrecision: s!.volumePrecision,
-        })
+      instanceApi()?.setSymbol({
+        ticker: s!.ticker,
+        pricePrecision: s!.pricePrecision,
+        volumePrecision: s!.volumePrecision,
+      })
 
       onCleanup(() => {
         // Optional cleanup logic before re-run
@@ -290,9 +303,9 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
 
   createEffect(() => {
     const t = theme()
-    instanceapi()?.setStyles(t)
+    instanceApi()?.setStyles(t)
     const color = t === 'dark' ? '#929AA5' : '#76808F'
-    instanceapi()?.setStyles({
+    instanceApi()?.setStyles({
       indicator: {
         tooltip: {
           features: [
@@ -391,28 +404,28 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   })
 
   createEffect(() => {
-    instanceapi()?.setLocale(locale())
+    instanceApi()?.setLocale(locale())
   })
 
   createEffect(() => {
-    instanceapi()?.setTimezone(timezone().key)
+    instanceApi()?.setTimezone(timezone().key)
   })
 
   createEffect(() => {
-    setWidgetDefaultStyles(lodashClone(instanceapi()!.getStyles()))
+    setWidgetDefaultStyles(lodashClone(instanceApi()!.getStyles()))
   })
 
   createEffect(() => {
     if (styles()) {
-      instanceapi()?.setStyles(styles()!)
+      instanceApi()?.setStyles(styles()!)
     }
   })
 
   return (
     <>
-      <i class="icon-close klinecharts-pro-load-icon"/>
+      <i class="icon-close klinecharts-pro-load-icon" />
       <Show when={showOverlayPopup()}>
-        <OverlayPopup/>
+        <OverlayPopup />
       </Show>
       <Show when={showOverlaySetting()}>
         <OverlaySettingModal
@@ -424,7 +437,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
           locale={props.locale}
           datafeed={props.dataloader}
           onSymbolSelected={symbol => { setSymbol(symbol) }}
-          onClose={() => { setSymbolSearchModalVisible(false) }}/>
+          onClose={() => { setSymbolSearchModalVisible(false) }} />
       </Show>
       <Show when={indicatorModalVisible()}>
         <IndicatorModal
@@ -435,10 +448,10 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
           onMainIndicatorChange={data => {
             const newMainIndicators = [...mainIndicators()]
             if (data.added) {
-              createIndicator(instanceapi()!, data.name, true, { id: 'candle_pane' })
+              createIndicator(instanceApi()!, data.name, true, { id: 'candle_pane' })
               newMainIndicators.push(data.name)
             } else {
-              instanceapi()?.removeIndicator({name: data.name, paneId: 'candle_pane', id: data.id ?? undefined})
+              instanceApi()?.removeIndicator({ name: data.name, paneId: 'candle_pane', id: data.id ?? undefined })
               newMainIndicators.splice(newMainIndicators.indexOf(data.name), 1)
             }
             setMainIndicators(newMainIndicators)
@@ -447,20 +460,20 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
             console.info('onSubIndicatorChange', data)
             const newSubIndicators = { ...subIndicators() }
             if (data.added) {
-              const id = createIndicator(instanceapi()!, data.name)
+              const id = createIndicator(instanceApi()!, data.name)
               if (id) {
                 // @ts-expect-error
                 newSubIndicators[data.name] = id
               }
             } else {
               if (data.id) {
-                instanceapi()?.removeIndicator({name: data.name, id: data.id})
+                instanceApi()?.removeIndicator({ name: data.name, id: data.id })
                 // @ts-expect-error
                 delete newSubIndicators[data.name]
               }
             }
             setSubIndicators(newSubIndicators)
-          }}/>
+          }} />
       </Show>
       <Show when={timezoneModalVisible()}>
         <TimezoneModal
@@ -473,10 +486,10 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
       <Show when={settingModalVisible()}>
         <SettingModal
           locale={props.locale}
-          currentStyles={utils.clone(instanceapi()!.getStyles())}
+          currentStyles={utils.clone(instanceApi()!.getStyles())}
           onClose={() => { setSettingModalVisible(false) }}
           onChange={style => {
-            instanceapi()?.setStyles(style)
+            instanceApi()?.setStyles(style)
           }}
           onRestoreDefault={(options: SelectDataSourceItem[]) => {
             const style = {}
@@ -484,7 +497,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
               const key = option.key
               lodashSet(style, key, utils.formatValue(widgetDefaultStyles(), key))
             })
-            instanceapi()?.setStyles(style)
+            instanceApi()?.setStyles(style)
           }}
         />
       </Show>
@@ -500,9 +513,9 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
           locale={props.locale}
           params={indicatorSettingModalParams()}
           onClose={() => { setIndicatorSettingModalParams({ visible: false, indicatorName: '', paneId: '', calcParams: [] }) }}
-          onConfirm={(params)=> {
+          onConfirm={(params) => {
             const modalParams = indicatorSettingModalParams()
-            instanceapi()?.overrideIndicator({ name: modalParams.indicatorName, calcParams: params, paneId: modalParams.paneId })
+            instanceApi()?.overrideIndicator({ name: modalParams.indicatorName, calcParams: params, paneId: modalParams.paneId })
           }}
         />
       </Show>
@@ -515,8 +528,8 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
         onMenuClick={async () => {
           try {
             await startTransition(() => setDrawingBarVisible(!drawingBarVisible()))
-            instanceapi()?.resize()
-          } catch (e) {}
+            instanceApi()?.resize()
+          } catch (e) { }
         }}
         onSymbolClick={() => { setSymbolSearchModalVisible(!symbolSearchModalVisible()) }}
         onPeriodChange={setPeriod}
@@ -524,8 +537,8 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
         onTimezoneClick={() => { setTimezoneModalVisible((visible => !visible)) }}
         onSettingClick={() => { setSettingModalVisible((visible => !visible)) }}
         onScreenshotClick={() => {
-          if (instanceapi()) {
-            const url = instanceapi()!.getConvertPictureUrl(true, 'jpeg', props.theme === 'dark' ? '#151517' : '#ffffff')
+          if (instanceApi()) {
+            const url = instanceApi()!.getConvertPictureUrl(true, 'jpeg', props.theme === 'dark' ? '#151517' : '#ffffff')
             setScreenshotUrl(url)
           }
         }}
@@ -534,16 +547,16 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
         class="klinecharts-pro-content"
         data-orders-pane-visible={orderPanelVisible()}>
         <Show when={loadingVisible()}>
-          <Loading/>
+          <Loading />
         </Show>
         <Show when={drawingBarVisible()}>
           <DrawingBar
             locale={props.locale}
             onDrawingItemClick={overlay => { pushOverlay(overlay) }}
-            onModeChange={mode => { instanceapi()?.overrideOverlay({ mode: mode as OverlayMode }) }}
-            onLockChange={lock => { instanceapi()?.overrideOverlay({ lock }) }}
-            onVisibleChange={visible => { instanceapi()?.overrideOverlay({ visible }) }}
-            onRemoveClick={(groupId) => { instanceapi()?.removeOverlay({ groupId }) }}/>
+            onModeChange={mode => { instanceApi()?.overrideOverlay({ mode: mode as OverlayMode }) }}
+            onLockChange={lock => { instanceApi()?.overrideOverlay({ lock }) }}
+            onVisibleChange={visible => { instanceApi()?.overrideOverlay({ visible }) }}
+            onRemoveClick={(groupId) => { instanceApi()?.removeOverlay({ groupId }) }} />
         </Show>
         <Show when={selectedOverlay()}>
           <SettingsFloating
@@ -554,7 +567,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
           ref={widgetRef}
           class='klinecharts-pro-widget'
           data-pane-style={props.overrides.backgroundType ?? 'solid'}
-          data-drawing-bar-visible={drawingBarVisible()}/>
+          data-drawing-bar-visible={drawingBarVisible()} />
       </div>
     </>
   )

@@ -18,12 +18,12 @@ import { Component, For, Show } from 'solid-js'
 import i18n from '../../i18n'
 
 import { cloneDeep, isArray, set as lodashSet } from 'lodash'
-import { getOptions } from './options/options'
-import { getOverlayType, popupOtherInfo, popupOverlay, setPopupOverlay, setShowOverlaySetting } from '../../store/overlaySettingStore'
 import { Color, Input, Modal, Select, SelectDataSourceItem } from '../../component'
-import { ChartObjType, ProOverlay } from '../../types'
-import { instanceapi } from '../../store/chartStore'
 import { useChartState } from '../../store/chartStateStore'
+import { instanceApi } from '../../store/chartStore'
+import { getOverlayType, popupOtherInfo, popupOverlay, setPopupOverlay, setShowOverlaySetting } from '../../store/overlaySettingStore'
+import { ChartObjType, ProOverlay } from '../../types'
+import { getOptions } from './options/options'
 
 export interface OverlaySettingModalProps {
   locale: string
@@ -69,11 +69,11 @@ const OverlaySettingModal: Component<OverlaySettingModalProps> = props => {
       const updatedStyle = cloneDeep(prevStyle)
       parentKey ? lodashSet(updatedStyle, `${parentKey}.${option.key}`, newValue) : lodashSet(updatedStyle, `${option.key}`, newValue)
       
-      instanceapi()?.overrideOverlay({ id: popupOverlay()?.id, styles: updatedStyle})
-      setPopupOverlay( (prevInstance) => instanceapi()?.getOverlayById(prevInstance?.id!) ?? prevInstance)
+      instanceApi()?.overrideOverlay({ id: popupOverlay()?.id, styles: updatedStyle})
+      setPopupOverlay( (prevInstance) => instanceApi()?.getOverlayById(prevInstance?.id!) ?? prevInstance)
       if (popupOverlay())
         useChartState().syncObject(popupOverlay()! as ProOverlay)
-      instanceapi()?.setStyles(chartObj.styleObj ?? {})
+      instanceApi()?.setStyles(chartObj.styleObj ?? {})
       
       return updatedStyle
     }
