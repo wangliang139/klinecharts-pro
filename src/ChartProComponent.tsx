@@ -12,32 +12,42 @@
  * limitations under the License.
  */
 
-import { createSignal, createEffect, onMount, Show, onCleanup, startTransition, Component } from 'solid-js'
+import { Component, createEffect, createSignal, onCleanup, onMount, Show, startTransition } from 'solid-js'
 
 import {
-  init, dispose, utils, Nullable, Chart, OverlayMode, Styles,
-  ActionType, PaneOptions, Indicator, DomPosition, FormatDateType,
+  Chart,
+  dispose,
   FormatDateParams,
-  TooltipFeatureStyle,
+  Indicator,
   IndicatorTooltipData,
-  FeatureType
+  init,
+  Nullable,
+  OverlayMode,
+  PaneOptions,
+  Styles,
+  TooltipFeatureStyle,
+  utils
 } from 'klinecharts'
 
-import lodashSet from 'lodash/set'
 import lodashClone from 'lodash/cloneDeep'
+import lodashSet from 'lodash/set'
 
-import { SelectDataSourceItem, Loading } from './component'
+import { Loading, SelectDataSourceItem } from './component'
 
 import {
-  PeriodBar, DrawingBar, IndicatorModal, TimezoneModal, SettingModal,
-  ScreenshotModal, IndicatorSettingModal, SymbolSearchModal
+  DrawingBar, IndicatorModal,
+  IndicatorSettingModal,
+  PeriodBar,
+  ScreenshotModal,
+  SettingModal,
+  SymbolSearchModal,
+  TimezoneModal
 } from './widget'
 
 import { translateTimezone } from './widget/timezone-modal/data'
 
-import { SymbolInfo, Period, ChartProOptions, ChartPro } from './types'
 import ChartDataLoader from './DataLoader'
-import { filter, set } from 'lodash'
+import { ChartPro, ChartProOptions, Period, SymbolInfo } from './types'
 
 export interface ChartProComponentProps extends Required<Omit<ChartProOptions, 'container' | 'datafeed'>> {
   ref: (chart: ChartPro) => void
@@ -69,8 +79,8 @@ function createIndicator (widget: Chart, indicatorName: string, isStack?: boolea
         icons.push(features[3])
       }
       return {
-        name: `${indicatorName}_${indi}`,
-        calcParamsText: indicatorName,
+        // name: `${indicatorName}_${indi}`,
+        // calcParamsText: indicatorName,
         features: icons,
         legends: []
       }
