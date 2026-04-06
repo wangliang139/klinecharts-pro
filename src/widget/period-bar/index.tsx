@@ -54,9 +54,6 @@ const PeriodBar: Component<PeriodBarProps> = props => {
     setFullScreen(full => !full)
   }
 
-  const onSymbolClickLog = () => {
-  }
-
   onMount(() => {
     document.addEventListener('fullscreenchange', fullScreenChange)
     document.addEventListener('mozfullscreenchange', fullScreenChange)
@@ -87,7 +84,7 @@ const PeriodBar: Component<PeriodBarProps> = props => {
       <Show when={props.symbol}>
         <div
           class="symbol"
-          onClick={onSymbolClickLog}>
+          onClick={props.onSymbolClick}>
           <Show when={props.symbol.logo}>
             <img alt="symbol" src={props.symbol.logo}/>
           </Show>
