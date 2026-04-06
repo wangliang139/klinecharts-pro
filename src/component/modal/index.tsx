@@ -24,9 +24,15 @@ export interface ModalProps extends ParentProps {
 }
 
 const Modal: ParentComponent<ModalProps> = (props) => {
+  const onMaskClick: JSX.EventHandler<HTMLDivElement, MouseEvent> = (e) => {
+    if (e.target === e.currentTarget) {
+      props.onClose?.()
+    }
+  }
   return (
     <div
-      class="klinecharts-pro-modal">
+      class="klinecharts-pro-modal"
+      onClick={onMaskClick}>
       <div
         style={{ width: `${props.width ?? 400}px` }}
         class="inner">
