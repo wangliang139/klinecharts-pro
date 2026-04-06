@@ -1,4 +1,4 @@
-import { Overlay } from "klinecharts";
+import { DeepPartial } from "klinecharts";
 import { createSignal, createEffect, onCleanup, onMount, JSX, Show } from "solid-js";
 import lodashSet from 'lodash/set'
 import { selectedOverlay, setChartModified } from '../../store/chartStore'
@@ -6,7 +6,19 @@ import { useChartState } from "../../store/chartStateStore";
 import { setPopupOverlay, setShowOverlaySetting } from "../../store/overlaySettingStore";
 import { Color } from "../../component";
 import { Icon } from "../icons";
-import { ProOverlay } from "../../types";
+import { OverlayProperties, ProOverlay } from "../../types";
+
+function overlayProperties(overlay: ProOverlay): DeepPartial<OverlayProperties> {
+  const gp = overlay.getProperties;
+  if (typeof gp === "function") {
+    try {
+      return gp.call(overlay, overlay.id) ?? {};
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
 
 const { popOverlay, modifyOverlay, modifyOverlayProperties } = useChartState()
 
@@ -56,6 +68,7 @@ export default function Floating(props: FloatingProps) {
   const [actionsVersion, setActionsVersion] = createSignal(0)
 
   const defaultActions = (overlay: ProOverlay): FloatingAction[] => {
+    const props = overlayProperties(overlay);
     console.info('default actions called');
     return [
       { key: "group", title: "Group", icon: "templates", onClick: (id) => console.debug("group", id) },
@@ -64,7 +77,7 @@ export default function Floating(props: FloatingProps) {
         title: "Line tool color",
         icon: "edit",
         // try to read sensible defaults from overlay.styles if present
-        editor: { type: "color", value: overlay.getProperties(overlay.id).lineColor ?? overlay.getProperties(overlay.id).borderColor ?? "#ffffff" },
+        editor: { type: "color", value: props.lineColor ?? props.borderColor ?? "#ffffff" },
         onClick: (id, v) => {
           console.debug("set border color", id, v)
           modifyOverlayProperties(overlay.id, { lineColor: v})
@@ -75,7 +88,7 @@ export default function Floating(props: FloatingProps) {
         title: "Line tool background",
         icon: "fill",
         // try to read sensible defaults from overlay.styles if present
-        editor: { type: "color", value: overlay.getProperties(overlay.id).backgroundColor ?? "#000000" },
+        editor: { type: "color", value: props.backgroundColor ?? "#000000" },
         onClick: (id, v) => {
           console.debug("set background", id, v)
           modifyOverlayProperties(overlay.id, { backgroundColor: v})
@@ -85,21 +98,21 @@ export default function Floating(props: FloatingProps) {
         key: "text",
         title: "Line tool text color",
         icon: "text",
-        editor: { type: "color", value: overlay.getProperties(overlay.id).textColor?? "#ffffff" },
+        editor: { type: "color", value: props.textColor ?? "#ffffff" },
         onClick: (id, v) => console.debug("set text color", id, v)
       },
       {
         key: "size",
         title: "Line tool width (px)",
         icon: "line",
-        editor: { type: "number", value: overlay.getProperties(overlay.id).textFontSize ?? 2, min: 1, max: 50, step: 1 },
+        editor: { type: "number", value: props.textFontSize ?? 2, min: 1, max: 50, step: 1 },
         onClick: (id, v) => console.debug("set size", id, v)
       },
       {
         key: "line",
         title: "Line tool style",
         icon: (() => {
-          const style = overlay.getProperties(overlay.id).lineStyle ?? "solid"
+          const style = props.lineStyle ?? "solid"
           ///@ts-expect-error
           return style === 'dashed' ? "lineDashed" : style === 'dotted' ? "lineDotted" : "line"
         })(),

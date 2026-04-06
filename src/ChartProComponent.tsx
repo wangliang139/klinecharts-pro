@@ -53,7 +53,7 @@ import Chart from './Chart'
 import { useChartState } from './store/chartStateStore'
 import {
   ChartProComponentProps, instanceApi, loadingVisible, orderPanelVisible,
-  period, selectedOverlay, setInstanceApi, setPeriod, setRooltelId, setStyles, setSymbol, styles, symbol
+  period, selectedOverlay, setInstanceApi, setPeriod, setRooltelId, setSelectedOverlay, setStyles, setSymbol, styles, symbol
 } from './store/chartStore'
 import { showOverlayPopup, showOverlaySetting } from './store/overlaySettingStore'
 import { Period, SymbolInfo } from './types/types'
@@ -280,8 +280,10 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
         console.info('period changed: set period', p)
         instanceApi()?.setPeriod(p!)
       }
-      if (prev?.symbol?.ticker !== s!.ticker)
+      if (prev !== undefined && prev.symbol?.ticker !== s!.ticker) {
         console.info('ticker changed: set symbol', s)
+        setSelectedOverlay(null)
+      }
       instanceApi()?.setSymbol({
         ticker: s!.ticker,
         pricePrecision: s!.pricePrecision,
