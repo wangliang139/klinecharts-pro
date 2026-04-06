@@ -1,5 +1,5 @@
 {
-  "name": "@klinecharts/pro",
+  "name": "@wangliang139/klinecharts",
   "version": "0.1.1",
   "description": "Financial chart built out of the box based on KLineChart.",
   "type": "module",
@@ -13,7 +13,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/klinecharts/pro"
+    "url": "https://github.com/wangliang139/klinecharts"
   },
   "keywords": [
     "klinecharts",
