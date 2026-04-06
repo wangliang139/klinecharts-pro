@@ -267,35 +267,24 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
 
   createEffect((prev?: PrevSymbolPeriod) => {
     // console.info('symbol or period changed effect', symbol(), period(), prev)
+    const s = symbol()
+    const p = period()
 
-    if (!props.dataloader.loading) {
-      // console.info('setLoadingVisible false by effect')
-      const s = symbol()
-      const p = period()
-
-      if (prev?.period.span !== p!.span && prev?.period.type !== p!.type) {
-        // console.info('period changed: set period', p)
-        instanceApi()?.setPeriod(p!)
-      }
-      if (prev !== undefined && prev.symbol?.ticker !== s!.ticker) {
-        // console.info('ticker changed: set symbol', s)
-        setSelectedOverlay(null)
-      }
-      instanceApi()?.setSymbol({
-        ticker: s!.ticker,
-        pricePrecision: s!.pricePrecision,
-        volumePrecision: s!.volumePrecision,
-      })
-
-      onCleanup(() => {
-        // Optional cleanup logic before re-run
-      })
-
-      return { symbol: s!, period: p! }
+    if (prev !== undefined && (prev.period.span !== p!.span || prev.period.type !== p!.type)) {
+      // console.info('period changed: set period', p)
+      instanceApi()?.setPeriod(p!)
     }
-    // console.info('props.dataloader.loading is true, skip setLoadingVisible false')
+    if (prev !== undefined && prev.symbol?.ticker !== s!.ticker) {
+      // console.info('ticker changed: set symbol', s)
+      setSelectedOverlay(null)
+    }
+    instanceApi()?.setSymbol({
+      ticker: s!.ticker,
+      pricePrecision: s!.pricePrecision,
+      volumePrecision: s!.volumePrecision,
+    })
 
-    return prev
+    return { symbol: s!, period: p! }
   })
 
   createEffect(() => {

@@ -41,7 +41,7 @@ const chart = new KLineChartPro({
 chart.setStyles({
   candle: {
     tooltip: {
-      title: {show: false, template: '{ticker} · {period}'},
+      title: {show: true, template: '{ticker} · {period}'},
     },
   },
 })

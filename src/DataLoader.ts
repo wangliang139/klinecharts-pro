@@ -1,5 +1,5 @@
 import { DataLoaderGetBarsParams, DataLoaderSubscribeBarParams, DataLoaderUnsubscribeBarParams } from "klinecharts";
-import { period, setLoadingVisible, symbol } from "./store/chartStore";
+import { setLoadingVisible } from "./store/chartStore";
 import { ChartDataLoaderType, Datafeed, Period, SymbolInfo } from "./types/types";
 
 export default class ChartDataLoader implements ChartDataLoaderType {
@@ -13,7 +13,8 @@ export default class ChartDataLoader implements ChartDataLoaderType {
 
   async getBars (params: DataLoaderGetBarsParams): Promise<void> {
     // console.info('ChartDataLoader getBars', params);
-    const { type, timestamp: _t, symbol: _s, period: _p, callback } = params;
+    const { type, timestamp: _t, symbol: s, period: _p, callback } = params;
+    const p = _p as Period;
       if (type === 'backward' || type === 'update') {
         // console.info('getBars: type is backward or update (no forward support yet)');
         callback([], false);
@@ -23,8 +24,6 @@ export default class ChartDataLoader implements ChartDataLoaderType {
       setLoadingVisible(true)
       const timestamp = _t ?? new Date().getTime()
       const get = async () => {
-        const p = period()!
-        const s =symbol()!
         const [to] = this.adjustFromTo(p, timestamp!, 1)
         const [from] = this.adjustFromTo(p, to, 500)
         const kLineDataList = await this._datafeed.getHistoryKLineData(s, p, from, to)
@@ -37,14 +36,14 @@ export default class ChartDataLoader implements ChartDataLoaderType {
 
   subscribeBar (params: DataLoaderSubscribeBarParams): void {
     // console.info('ChartDataLoader subscribeBar', params);
-    const { symbol: _s, period: _p, callback } = params;
-    this._datafeed.subscribe(symbol()!, period()!, callback)
+    const { symbol: s, period: _p, callback } = params;
+    this._datafeed.subscribe(s, _p as Period, callback)
   }
 
   unsubscribeBar (params: DataLoaderUnsubscribeBarParams): void {
     // console.info('ChartDataLoader unsubscribeBar', params);
-    const { symbol: _s, period: _p } = params;
-    this._datafeed.unsubscribe(symbol()!, period()!)
+    const { symbol: s, period: _p } = params;
+    this._datafeed.unsubscribe(s, _p as Period)
   }
 
   searchSymbols(search?: string): Promise<SymbolInfo[]> {
