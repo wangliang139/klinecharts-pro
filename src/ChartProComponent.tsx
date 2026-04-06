@@ -186,7 +186,6 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
       instanceApi()?.subscribeAction('onIndicatorTooltipFeatureClick', (data) => {
         console.info('onIndicatorTooltipFeatureClick', data)
         const _data = data as { paneId: string, feature: TooltipFeatureStyle, indicator: Indicator }
-        // if (_data.indicatorName) {
         switch (_data.feature.id) {
           case 'visible': {
             instanceApi()?.overrideIndicator({ name: _data.indicator.name, visible: true, paneId: _data.paneId })
@@ -219,7 +218,6 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
             }
           }
         }
-        // }
       })
 
       instanceApi()?.subscribeAction('onCandleTooltipFeatureClick', (data) => {
