@@ -1,0 +1,22 @@
+{
+  "name": "klinecharts-pro-dev-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "chroma-js": "^3.2.0",
+    "klinecharts": "^10.0.0-beta1",
+    "lodash": "^4.18.1",
+    "solid-js": "^1.9.12"
+  },
+  "devDependencies": {
+    "less": "^4.6.4",
+    "typescript": "^5.9.3",
+    "vite": "^4.5.14",
+    "vite-plugin-solid": "^2.11.12"
+  }
+}

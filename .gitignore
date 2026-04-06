@@ -1,4 +1,6 @@
 /node_modules
+/examples/dev/node_modules
+/examples/dev/dist
 /dist
 /website
 /docs/.vitepress/cache
