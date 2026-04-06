@@ -37,6 +37,7 @@
     "docs:deploy": "npm run docs:build && gh-pages -d website"
   },
   "devDependencies": {
+    "klinecharts": "10.0.0-beta1",
     "@solidjs/testing-library": "^0.6.1",
     "@testing-library/jest-dom": "^5.17.0",
     "@types/lodash": "^4.17.24",
@@ -63,6 +64,6 @@
     "solid-js": "^1.9.12"
   },
   "peerDependencies": {
-    "klinecharts": "9.8.6"
+    "klinecharts": "10.0.0-beta1"
   }
 }

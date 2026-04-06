@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      klinecharts:
-        specifier: 9.8.6
-        version: 9.8.6
       lodash:
         specifier: ^4.18.1
         version: 4.18.1
@@ -57,6 +54,9 @@ importers:
       gh-pages:
         specifier: ^5.0.0
         version: 5.0.0
+      klinecharts:
+        specifier: 10.0.0-beta1
+        version: 10.0.0-beta1
       less:
         specifier: ^4.6.4
         version: 4.6.4
@@ -2148,9 +2148,8 @@ packages:
   keyv@4.5.4:
     resolution: {integrity: sha512-oxVHkHR/EJf2CNXnWxRLW6mg7JyCCUcG0DtEGmL2ctUo1PNTin1PUil+r/+4r5MpVgC/fn1kjsx7mjSujKqIpw==}
 
-  klinecharts@9.8.6:
-    resolution: {integrity: sha512-06Pcj9P6wdHadf7rV010ILCJc44jtHWmerM1RBmVR/q9Ql0WedaLwvJm8qAkftYARNRXUfidVdJbLzDDmFpiRw==}
-    engines: {node: '>=0.10.0'}
+  klinecharts@10.0.0-beta1:
+    resolution: {integrity: sha512-5ZxFGjJeZqt9+q45lZDhApC3kdgrk51i27uSpIELgXJLNgfSc0anlb8XkU+52LVrBYnTv9dFr8/Q7lG81vIV1w==}
 
   less-loader@11.1.4:
     resolution: {integrity: sha512-6/GrYaB6QcW6Vj+/9ZPgKKs6G10YZai/l/eJ4SLwbzqNTBsAqt5hSLVF47TgsiBxV1P6eAU0GYRH3YRuQU9V3A==}
@@ -5393,7 +5392,7 @@ snapshots:
     dependencies:
       json-buffer: 3.0.1
 
-  klinecharts@9.8.6: {}
+  klinecharts@10.0.0-beta1: {}
 
   less-loader@11.1.4(less@4.6.4)(webpack@5.105.4):
     dependencies:

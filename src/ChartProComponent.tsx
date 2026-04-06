@@ -16,7 +16,12 @@ import { createSignal, createEffect, onMount, Show, onCleanup, startTransition, 
 
 import {
   init, dispose, utils, Nullable, Chart, OverlayMode, Styles,
-  TooltipIconPosition, ActionType, PaneOptions, Indicator, DomPosition, FormatDateType
+  PaneOptions, Indicator,
+  type Period as KLinePeriod,
+  type DataLoader,
+  type IndicatorTooltipData,
+  type TooltipFeatureStyle,
+  type SymbolInfo as KLineChartSymbolInfo
 } from 'klinecharts'
 
 import lodashSet from 'lodash/set'
@@ -37,30 +42,78 @@ export interface ChartProComponentProps extends Required<Omit<ChartProOptions, '
   ref: (chart: ChartPro) => void
 }
 
-interface PrevSymbolPeriod {
-  symbol: SymbolInfo
-  period: Period
+function toKLinePeriod (p: Period): KLinePeriod {
+  const span = p.multiplier
+  switch (p.timespan) {
+    case 'minute': return { type: 'minute', span }
+    case 'hour': return { type: 'hour', span }
+    case 'day': return { type: 'day', span }
+    case 'week': return { type: 'week', span }
+    case 'month': return { type: 'month', span }
+    case 'year': return { type: 'year', span }
+    default: return { type: 'minute', span: 1 }
+  }
+}
+
+function toProPeriod (p: KLinePeriod): Period {
+  const typeMap: Record<KLinePeriod['type'], Period['timespan']> = {
+    second: 'minute',
+    minute: 'minute',
+    hour: 'hour',
+    day: 'day',
+    week: 'week',
+    month: 'month',
+    year: 'year'
+  }
+  return {
+    multiplier: p.span,
+    timespan: typeMap[p.type],
+    text: ''
+  }
+}
+
+function toKLineSymbol (s: SymbolInfo): KLineChartSymbolInfo {
+  return {
+    ...s,
+    ticker: s.ticker,
+    pricePrecision: s.pricePrecision ?? 2,
+    volumePrecision: s.volumePrecision ?? 0
+  } as KLineChartSymbolInfo
+}
+
+function indicatorTooltipFeatures (color: string): TooltipFeatureStyle[] {
+  const common: Pick<TooltipFeatureStyle, 'marginRight' | 'marginBottom' | 'paddingLeft' | 'paddingTop' | 'paddingRight' | 'paddingBottom' | 'borderRadius' | 'type' | 'backgroundColor' | 'activeBackgroundColor'> = {
+    marginRight: 0,
+    marginBottom: 0,
+    paddingLeft: 0,
+    paddingTop: 0,
+    paddingRight: 0,
+    paddingBottom: 0,
+    borderRadius: 0,
+    type: 'icon_font',
+    backgroundColor: 'transparent',
+    activeBackgroundColor: 'rgba(22, 119, 255, 0.15)'
+  }
+  return [
+    { id: 'visible', position: 'middle', marginLeft: 8, marginTop: 7, size: 14, color, activeColor: color, content: { family: 'icomoon', code: '\ue903' }, ...common },
+    { id: 'invisible', position: 'middle', marginLeft: 8, marginTop: 7, size: 14, color, activeColor: color, content: { family: 'icomoon', code: '\ue901' }, ...common },
+    { id: 'setting', position: 'middle', marginLeft: 6, marginTop: 7, size: 14, color, activeColor: color, content: { family: 'icomoon', code: '\ue902' }, ...common },
+    { id: 'close', position: 'middle', marginLeft: 6, marginTop: 7, size: 14, color, activeColor: color, content: { family: 'icomoon', code: '\ue900' }, ...common }
+  ]
 }
 
 function createIndicator (widget: Nullable<Chart>, indicatorName: string, isStack?: boolean, paneOptions?: PaneOptions): Nullable<string> {
   if (indicatorName === 'VOL') {
-    paneOptions = { gap: { bottom: 2 }, ...paneOptions }
+    paneOptions = { axis: { gap: { bottom: 2 } }, ...paneOptions }
   }
   return widget?.createIndicator({
     name: indicatorName,
-    // @ts-expect-error
-    createTooltipDataSource: ({ indicator, defaultStyles }) => {
-      const icons = []
-      if (indicator.visible) {
-        icons.push(defaultStyles.tooltip.icons[1])
-        icons.push(defaultStyles.tooltip.icons[2])
-        icons.push(defaultStyles.tooltip.icons[3])
-      } else {
-        icons.push(defaultStyles.tooltip.icons[0])
-        icons.push(defaultStyles.tooltip.icons[2])
-        icons.push(defaultStyles.tooltip.icons[3])
-      }
-      return { icons }
+    createTooltipDataSource: ({ indicator, chart }): IndicatorTooltipData => {
+      const fs = chart.getStyles().indicator.tooltip.features ?? []
+      const features = indicator.visible
+        ? [fs[1], fs[2], fs[3]]
+        : [fs[0], fs[2], fs[3]]
+      return { features: features as TooltipFeatureStyle[] } as IndicatorTooltipData
     }
   }, isStack, paneOptions) ?? null
 }
@@ -69,9 +122,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   let widgetRef: HTMLDivElement | undefined = undefined
   let widget: Nullable<Chart> = null
 
-  let priceUnitDom: HTMLElement
-
-  let loading = false
+  let priceUnitDom: HTMLElement | undefined
 
   const [theme, setTheme] = createSignal(props.theme)
   const [styles, setStyles] = createSignal(props.styles)
@@ -96,6 +147,8 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   const [symbolSearchModalVisible, setSymbolSearchModalVisible] = createSignal(false)
 
   const [loadingVisible, setLoadingVisible] = createSignal(false)
+
+  const [chartMounted, setChartMounted] = createSignal(false)
 
   const [indicatorSettingModalParams, setIndicatorSettingModalParams] = createSignal({
     visible: false, indicatorName: '', paneId: '', calcParams: [] as Array<any>
@@ -175,18 +228,18 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   onMount(() => {
     window.addEventListener('resize', documentResize)
     widget = init(widgetRef!, {
-      customApi: {
-        formatDate: (dateTimeFormat: Intl.DateTimeFormat, timestamp, format: string, type: FormatDateType) => {
+      formatter: {
+        formatDate: ({ dateTimeFormat, timestamp, template, type }) => {
           const p = period()
           switch (p.timespan) {
             case 'minute': {
-              if (type === FormatDateType.XAxis) {
+              if (type === 'xAxis') {
                 return utils.formatDate(dateTimeFormat, timestamp, 'HH:mm')
               }
               return utils.formatDate(dateTimeFormat, timestamp, 'YYYY-MM-DD HH:mm')
             }
             case 'hour': {
-              if (type === FormatDateType.XAxis) {
+              if (type === 'xAxis') {
                 return utils.formatDate(dateTimeFormat, timestamp, 'MM-DD HH:mm')
               }
               return utils.formatDate(dateTimeFormat, timestamp, 'YYYY-MM-DD HH:mm')
@@ -194,25 +247,26 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
             case 'day':
             case 'week': return utils.formatDate(dateTimeFormat, timestamp, 'YYYY-MM-DD')
             case 'month': {
-              if (type === FormatDateType.XAxis) {
+              if (type === 'xAxis') {
                 return utils.formatDate(dateTimeFormat, timestamp, 'YYYY-MM')
               }
               return utils.formatDate(dateTimeFormat, timestamp, 'YYYY-MM-DD')
             }
             case 'year': {
-              if (type === FormatDateType.XAxis) {
+              if (type === 'xAxis') {
                 return utils.formatDate(dateTimeFormat, timestamp, 'YYYY')
               }
               return utils.formatDate(dateTimeFormat, timestamp, 'YYYY-MM-DD')
             }
+            default: break
           }
-          return utils.formatDate(dateTimeFormat, timestamp, 'YYYY-MM-DD HH:mm')
+          return utils.formatDate(dateTimeFormat, timestamp, template)
         }
       }
     })
 
     if (widget) {
-      const watermarkContainer = widget.getDom('candle_pane', DomPosition.Main)
+      const watermarkContainer = widget.getDom('candle_pane', 'main')
       if (watermarkContainer) {
         let watermark = document.createElement('div')
         watermark.className = 'klinecharts-pro-watermark'
@@ -225,7 +279,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
         watermarkContainer.appendChild(watermark)
       }
 
-      const priceUnitContainer = widget.getDom('candle_pane', DomPosition.YAxis)
+      const priceUnitContainer = widget.getDom('candle_pane', 'yAxis')
       priceUnitDom = document.createElement('span')
       priceUnitDom.className = 'klinecharts-pro-price-unit'
       priceUnitContainer?.appendChild(priceUnitDom)
@@ -243,49 +297,83 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
       }
     })
     setSubIndicators(subIndicatorMap)
-    widget?.loadMore(timestamp => {
-      loading = true
-      const get = async () => {
-        const p = period()
-        const [to] = adjustFromTo(p, timestamp!, 1)
-        const [from] = adjustFromTo(p, to, 500)
-        const kLineDataList = await props.datafeed.getHistoryKLineData(symbol(), p, from, to)
-        widget?.applyMoreData(kLineDataList, kLineDataList.length > 0)
-        loading = false
+
+    const dataLoader: DataLoader = {
+      getBars: async (params) => {
+        const { type, timestamp, symbol: sym, period: klPeriod, callback } = params
+        const p = toProPeriod(klPeriod)
+        const s = sym as SymbolInfo
+        try {
+          if (type === 'init') {
+            setLoadingVisible(true)
+            const [from, to] = adjustFromTo(p, Date.now(), 500)
+            const list = await props.datafeed.getHistoryKLineData(s, p, from, to)
+            callback(list, list.length > 0)
+          } else if (type === 'backward') {
+            const [anchor] = adjustFromTo(p, timestamp!, 1)
+            const [from] = adjustFromTo(p, anchor, 500)
+            const list = await props.datafeed.getHistoryKLineData(s, p, from, anchor)
+            callback(list, list.length > 0)
+          } else if (type === 'forward') {
+            callback([], { forward: false, backward: true })
+          }
+        } finally {
+          if (type === 'init') {
+            setLoadingVisible(false)
+          }
+        }
+      },
+      subscribeBar: ({ symbol: sym, period: klPeriod, callback }) => {
+        props.datafeed.subscribe(sym as SymbolInfo, toProPeriod(klPeriod), callback)
+      },
+      unsubscribeBar: ({ symbol: sym, period: klPeriod }) => {
+        props.datafeed.unsubscribe(sym as SymbolInfo, toProPeriod(klPeriod))
       }
-      get()
-    })
-    widget?.subscribeAction(ActionType.OnTooltipIconClick, (data) => {
-      if (data.indicatorName) {
-        switch (data.iconId) {
-          case 'visible': {
-            widget?.overrideIndicator({ name: data.indicatorName, visible: true }, data.paneId)
-            break
-          }
-          case 'invisible': {
-            widget?.overrideIndicator({ name: data.indicatorName, visible: false }, data.paneId)
-            break
-          }
-          case 'setting': {
-            const indicator = widget?.getIndicatorByPaneId(data.paneId, data.indicatorName) as Indicator
-            setIndicatorSettingModalParams({
-              visible: true, indicatorName: data.indicatorName, paneId: data.paneId, calcParams: indicator.calcParams
-            })
-            break
-          }
-          case 'close': {
-            if (data.paneId === 'candle_pane') {
-              const newMainIndicators = [...mainIndicators()]
-              widget?.removeIndicator('candle_pane', data.indicatorName)
-              newMainIndicators.splice(newMainIndicators.indexOf(data.indicatorName), 1)
-              setMainIndicators(newMainIndicators)
-            } else {
-              const newIndicators = { ...subIndicators() }
-              widget?.removeIndicator(data.paneId, data.indicatorName)
-              // @ts-expect-error
-              delete newIndicators[data.indicatorName]
-              setSubIndicators(newIndicators)
-            }
+    }
+    widget?.setDataLoader(dataLoader)
+
+    setChartMounted(true)
+
+    widget?.subscribeAction('onIndicatorTooltipFeatureClick', (raw) => {
+      const data = raw as {
+        paneId?: string
+        feature?: { id: string }
+        indicator?: Indicator
+      }
+      const name = data.indicator?.name
+      const paneId = data.paneId
+      const iconId = data.feature?.id
+      if (!name || !paneId || !iconId) {
+        return
+      }
+      switch (iconId) {
+        case 'visible': {
+          widget?.overrideIndicator({ name, visible: true, paneId })
+          break
+        }
+        case 'invisible': {
+          widget?.overrideIndicator({ name, visible: false, paneId })
+          break
+        }
+        case 'setting': {
+          const ind = widget?.getIndicators({ paneId, name })[0]
+          setIndicatorSettingModalParams({
+            visible: true, indicatorName: name, paneId, calcParams: ind?.calcParams ?? []
+          })
+          break
+        }
+        case 'close': {
+          if (paneId === 'candle_pane') {
+            const newMainIndicators = [...mainIndicators()]
+            widget?.removeIndicator({ paneId: 'candle_pane', name })
+            newMainIndicators.splice(newMainIndicators.indexOf(name), 1)
+            setMainIndicators(newMainIndicators)
+          } else {
+            const newIndicators = { ...subIndicators() }
+            widget?.removeIndicator({ paneId, name })
+            // @ts-expect-error
+            delete newIndicators[name]
+            setSubIndicators(newIndicators)
           }
         }
       }
@@ -299,38 +387,29 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
 
   createEffect(() => {
     const s = symbol()
+    if (!priceUnitDom) {
+      return
+    }
     if (s?.priceCurrency) {
       priceUnitDom.innerHTML = s?.priceCurrency.toLocaleUpperCase()
       priceUnitDom.style.display = 'flex'
     } else {
       priceUnitDom.style.display = 'none'
     }
-    widget?.setPriceVolumePrecision(s?.pricePrecision ?? 2, s?.volumePrecision ?? 0)
   })
 
-  createEffect((prev?: PrevSymbolPeriod) => {
-    if (!loading) {
-      if (prev) {
-        props.datafeed.unsubscribe(prev.symbol, prev.period)
-      }
-      const s = symbol()
-      const p = period()
-      loading = true
-      setLoadingVisible(true)
-      const get = async () => {
-        const [from, to] = adjustFromTo(p, new Date().getTime(), 500)
-        const kLineDataList = await props.datafeed.getHistoryKLineData(s, p, from, to)
-        widget?.applyNewData(kLineDataList, kLineDataList.length > 0)
-        props.datafeed.subscribe(s, p, data => {
-          widget?.updateData(data)
-        })
-        loading = false
-        setLoadingVisible(false)
-      }
-      get()
-      return { symbol: s, period: p }
+  createEffect(() => {
+    if (!chartMounted() || !widget) {
+      return
     }
-    return prev
+    widget.setSymbol(toKLineSymbol(symbol()))
+  })
+
+  createEffect(() => {
+    if (!chartMounted() || !widget) {
+      return
+    }
+    widget.setPeriod(toKLinePeriod(period()))
   })
 
   createEffect(() => {
@@ -340,84 +419,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
     widget?.setStyles({
       indicator: {
         tooltip: {
-          icons: [
-            {
-              id: 'visible',
-              position: TooltipIconPosition.Middle,
-              marginLeft: 8,
-              marginTop: 7,
-              marginRight: 0,
-              marginBottom: 0,
-              paddingLeft: 0,
-              paddingTop: 0,
-              paddingRight: 0,
-              paddingBottom: 0,
-              icon: '\ue903',
-              fontFamily: 'icomoon',
-              size: 14,
-              color: color,
-              activeColor: color,
-              backgroundColor: 'transparent',
-              activeBackgroundColor: 'rgba(22, 119, 255, 0.15)'
-            },
-            {
-              id: 'invisible',
-              position: TooltipIconPosition.Middle,
-              marginLeft: 8,
-              marginTop: 7,
-              marginRight: 0,
-              marginBottom: 0,
-              paddingLeft: 0,
-              paddingTop: 0,
-              paddingRight: 0,
-              paddingBottom: 0,
-              icon: '\ue901',
-              fontFamily: 'icomoon',
-              size: 14,
-              color: color,
-              activeColor: color,
-              backgroundColor: 'transparent',
-              activeBackgroundColor: 'rgba(22, 119, 255, 0.15)'
-            },
-            {
-              id: 'setting',
-              position: TooltipIconPosition.Middle,
-              marginLeft: 6,
-              marginTop: 7,
-              marginBottom: 0,
-              marginRight: 0,
-              paddingLeft: 0,
-              paddingTop: 0,
-              paddingRight: 0,
-              paddingBottom: 0,
-              icon: '\ue902',
-              fontFamily: 'icomoon',
-              size: 14,
-              color: color,
-              activeColor: color,
-              backgroundColor: 'transparent',
-              activeBackgroundColor: 'rgba(22, 119, 255, 0.15)'
-            },
-            {
-              id: 'close',
-              position: TooltipIconPosition.Middle,
-              marginLeft: 6,
-              marginTop: 7,
-              marginRight: 0,
-              marginBottom: 0,
-              paddingLeft: 0,
-              paddingTop: 0,
-              paddingRight: 0,
-              paddingBottom: 0,
-              icon: '\ue900',
-              fontFamily: 'icomoon',
-              size: 14,
-              color: color,
-              activeColor: color,
-              backgroundColor: 'transparent',
-              activeBackgroundColor: 'rgba(22, 119, 255, 0.15)'
-            }
-          ]
+          features: indicatorTooltipFeatures(color)
         }
       }
     })
@@ -460,7 +462,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
               createIndicator(widget, data.name, true, { id: 'candle_pane' })
               newMainIndicators.push(data.name)
             } else {
-              widget?.removeIndicator('candle_pane', data.name)
+              widget?.removeIndicator({ paneId: 'candle_pane', name: data.name })
               newMainIndicators.splice(newMainIndicators.indexOf(data.name), 1)
             }
             setMainIndicators(newMainIndicators)
@@ -475,7 +477,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
               }
             } else {
               if (data.paneId) {
-                widget?.removeIndicator(data.paneId, data.name)
+                widget?.removeIndicator({ paneId: data.paneId, name: data.name })
                 // @ts-expect-error
                 delete newSubIndicators[data.name]
               }
@@ -523,7 +525,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
           onClose={() => { setIndicatorSettingModalParams({ visible: false, indicatorName: '', paneId: '', calcParams: [] }) }}
           onConfirm={(params)=> {
             const modalParams = indicatorSettingModalParams()
-            widget?.overrideIndicator({ name: modalParams.indicatorName, calcParams: params }, modalParams.paneId)
+            widget?.overrideIndicator({ name: modalParams.indicatorName, calcParams: params, paneId: modalParams.paneId })
           }}
         />
       </Show>
