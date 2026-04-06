@@ -18,6 +18,8 @@ import Button, { ButtonProps } from '../button'
 
 export interface ModalProps extends ParentProps {
   width?: number
+  /** 固定内层高度时，内容区自动占满并可滚动 */
+  height?: number
   title?: JSX.Element
   buttons?: ButtonProps[]
   onClose?: () => void
@@ -31,12 +33,22 @@ const Modal: ParentComponent<ModalProps> = (props) => {
       props.onClose?.()
     }
   }
+  const innerStyle: JSX.CSSProperties = {}
+  if (props.width != null) {
+    innerStyle.width = `${props.width}px`
+    innerStyle['max-width'] = `${props.width}px`
+  }
+  if (props.height != null) {
+    innerStyle.height = `${props.height}px`
+    innerStyle['max-height'] = `${props.height}px`
+  }
+
   return (
     <div
       class="klinecharts-pro-modal" onclick={handleClose}>
       <div
-        // style={{ width: `${props.width ?? 400}px` }}
-        class="inner">
+        class={`inner${props.height != null ? ' inner--fixed-height' : ''}`}
+        style={innerStyle}>
         <div
           class="title-container">
           {props.title}

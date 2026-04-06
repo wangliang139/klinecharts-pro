@@ -12,17 +12,17 @@
  * limitations under the License.
  */
 
-import { Component, createEffect, For, createSignal } from 'solid-js'
-import { Styles, utils, DeepPartial } from 'klinecharts'
+import { DeepPartial, Styles, utils } from 'klinecharts'
+import { Component, createEffect, createSignal, For } from 'solid-js'
 
 import lodashSet from 'lodash/set'
 
-import { Modal, Select, Switch, Color } from '../../component'
 import type { SelectDataSourceItem } from '../../component'
+import { Color, Modal, Select, Switch } from '../../component'
 
 import i18n from '../../i18n'
-import { getOptions } from './data'
 import { ChartObjType } from '../../types'
+import { getOptions } from './data'
 // import { chartsession, chartsessionCtr } from '../../ChartProComponent'
 import { setChartModified } from '../../store/chartStore'
 
@@ -91,8 +91,8 @@ const SettingModal: Component<SettingModalProps> = props => {
     {text: 'Candle', key: 'candle'},
     {text: 'Indicator', key: 'indicator'},
     {text: 'Grid', key: 'grid'},
-    {text: 'X-axis', key: 'xAxis'},
-    {text: 'Y-axis', key: 'yAxis'},
+    {text: 'X-Axis', key: 'xAxis'},
+    {text: 'Y-Axis', key: 'yAxis'},
     {text: 'Separator', key: 'separator'},
     {text: 'Crosshair', key: 'crosshair'}
   ]
@@ -100,6 +100,8 @@ const SettingModal: Component<SettingModalProps> = props => {
   return (
     <Modal
       title={i18n('setting', props.locale)}
+      width={640}
+      height={560}
       buttons={[
         {
           children: i18n('restore_default', props.locale),

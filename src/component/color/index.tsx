@@ -264,6 +264,16 @@ const Color: Component<ColorProps> = props => {
 	}
 
 	return (
+		<>
+			{open() && (
+				<div
+					class="klinecharts-pro-color-backdrop"
+					aria-hidden="true"
+					onClick={() => {
+						cancelColorChange()
+					}}
+				/>
+			)}
 		<div
 			style={`width: 120px; background-color: ${finalColor()}`}
 			class={`klinecharts-pro-color ${props.class ?? ''} ${open() ? 'klinecharts-pro-color-show' : ''}`}
@@ -425,6 +435,7 @@ const Color: Component<ColorProps> = props => {
 				</div>
 			</div>
 		</div>
+		</>
 	)
 }
 

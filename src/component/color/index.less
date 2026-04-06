@@ -1,3 +1,10 @@
+.@{prefix-cls}-color-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: transparent;
+}
+
 .@{prefix-cls}-color {
   position: relative;
   display: flex;
@@ -43,7 +50,7 @@
     transform: scaleY(0);
     transform-origin: top;
     opacity: 0;
-    z-index: 100;
+    z-index: 101;
     border-radius: 3px;
     // max-height: 200px;
     overflow-y: auto;
@@ -181,6 +188,9 @@
 }
 
 .@{prefix-cls}-color-show {
+  position: relative;
+  z-index: 101;
+
   .selector-container {
     border-color: var(--klinecharts-pro-primary-color)!important;
     .value {

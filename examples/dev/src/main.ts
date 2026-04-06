@@ -25,7 +25,7 @@ const chart = new KLineChartPro({
   },
   period: { span: 1, type: 'minute', text: '1m' },
   datafeed: new MockDatafeed(),
-  theme: 'dark',
+  theme: 'light',
   locale: 'zh-CN',
   drawingBarVisible: true,
 })
