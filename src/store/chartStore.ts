@@ -26,6 +26,19 @@ export const [showSpeed, setShowSpeed] = createSignal(false)
 export const [screenshotUrl, setScreenshotUrl] = createSignal('')
 export const [rootlelID, setRooltelId] = createSignal('')
 
+/** 全屏目标：有 rootElementId 时用 getElementById；否则从触发节点向上找 .klinecharts-pro，再退回首个图表容器。 */
+export function resolveRootNode(fromNode?: Node | null): HTMLElement | null {
+  const id = rootlelID()
+  if (id) {
+    return document.getElementById(id)
+  }
+  if (fromNode instanceof Element) {
+    const closest = fromNode.closest('.klinecharts-pro')
+    if (closest instanceof HTMLElement) return closest
+  }
+  return document.querySelector('.klinecharts-pro')
+}
+
 export const [loadingVisible, setLoadingVisible] = createSignal(false)
 export const [symbol, setSymbol] = createSignal<Nullable<SymbolInfo>>(null)
 export const [period, setPeriod] = createSignal<Nullable<Period>>(null)

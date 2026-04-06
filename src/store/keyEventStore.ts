@@ -3,7 +3,7 @@ import { createSignal, startTransition } from "solid-js";
 import { setInputClass } from "../component/input";
 import { setPeriodInputValue } from "../widget/timeframe-modal";
 import { documentResize } from "./chartStateStore";
-import { fullScreen, indicatorModalVisible, instanceApi, orderModalVisible, orderPanelVisible, periodModalVisible, rootlelID, screenshotUrl, setIndicatorModalVisible, setOrderPanelVisible, setPeriodModalVisible, setScreenshotUrl, setSettingModalVisible, settingModalVisible, theme } from "./chartStore";
+import { fullScreen, indicatorModalVisible, instanceApi, orderModalVisible, orderPanelVisible, periodModalVisible, resolveRootNode, screenshotUrl, setIndicatorModalVisible, setOrderPanelVisible, setPeriodModalVisible, setScreenshotUrl, setSettingModalVisible, settingModalVisible, theme } from "./chartStore";
 import { showOverlaySetting } from "./overlaySettingStore";
 
 export const [ctrlKeyedDown, setCtrlKeyedDown] = createSignal(false)
@@ -128,7 +128,7 @@ const takeScreenshot = () => {
 const toggleFullscreen = () => {
   if (!fullScreen()) {
     // const el = ref?.parentElement
-    const el = document.querySelector(`#${rootlelID()}`)
+    const el = resolveRootNode()
     if (el) {
       // @ts-expect-error
       const enterFullScreen = el.requestFullscreen ?? el.webkitRequestFullscreen ?? el.mozRequestFullScreen ?? el.msRequestFullscreen

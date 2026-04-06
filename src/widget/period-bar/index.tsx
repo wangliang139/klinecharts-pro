@@ -12,15 +12,13 @@
  * limitations under the License.
  */
 
-import { Component, Show, createSignal, onMount, onCleanup } from 'solid-js'
+import { Component, Show, createSignal, onCleanup, onMount } from 'solid-js'
 
-import { SymbolInfo, Period } from '../../types'
+import { Period, SymbolInfo } from '../../types'
 
-import i18n from '../../i18n'
-import { fullScreen, setFullScreen } from '../../store/chartStore'
 import { getScreenSize } from '../../helpers'
-import { isString } from 'lodash'
-import { rootlelID } from '../../store/chartStore'
+import i18n from '../../i18n'
+import { fullScreen, resolveRootNode, setFullScreen } from '../../store/chartStore'
 
 export interface PeriodBarProps {
   locale: string
@@ -191,7 +189,7 @@ const PeriodBar: Component<PeriodBarProps> = props => {
         onClick={() => {
           if (!fullScreen()) {
             // const el = ref?.parentElement
-            const el = isString(rootlelID()) ? document.querySelector(`#${rootlelID()}`) : rootlelID()
+            const el = resolveRootNode(ref)
             if (el) {
               // @ts-expect-error
               const enterFullScreen = el.requestFullscreen ?? el.webkitRequestFullscreen ?? el.mozRequestFullScreen ?? el.msRequestFullscreen
