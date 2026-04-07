@@ -5,8 +5,6 @@ import { createApolloClient } from './apollo'
 
 import './main.css'
 
-const defaultExchange = import.meta.env.VITE_KLINE_EXCHANGE ?? 'binance'
-const defaultTicker = import.meta.env.VITE_KLINE_SYMBOL ?? 'BTC/USDT:FUTURE'
 const apolloClient = createApolloClient()
 const datafeed = createApiDatafeed(apolloClient)
 
@@ -20,11 +18,11 @@ root.innerHTML = '<div id="chart" class="chart-wrap"></div>'
 const chart = new KLineChartPro({
   container: 'chart',
   symbol: {
-    exchange: defaultExchange,
-    ticker: defaultTicker,
-    name: defaultTicker,
-    shortName: defaultTicker,
-    market: defaultExchange,
+    ticker: 'BTC/USDT:FUTURE',
+    name: 'BTC/USDT:FUTURE',
+    shortName: 'BTC/USDT:FUTURE',
+    market: 'binance',
+    exchange: 'binance',
     pricePrecision: 2,
     volumePrecision: 2,
     priceCurrency: 'USDT',
@@ -36,8 +34,8 @@ const chart = new KLineChartPro({
     { span: 5, type: 'minute', text: '5m' },
     { span: 15, type: 'minute', text: '15m' },
     { span: 1, type: 'hour', text: '1h' },
-    { span: 2, type: 'hour', text: '2h' },
     { span: 4, type: 'hour', text: '4h' },
+    { span: 1, type: 'day', text: '1d' },
   ],
   datafeed,
   theme: 'dark',

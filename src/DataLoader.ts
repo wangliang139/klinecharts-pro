@@ -24,8 +24,7 @@ export default class ChartDataLoader implements ChartDataLoaderType {
       setLoadingVisible(true)
       const timestamp = _t ?? new Date().getTime()
       const get = async () => {
-        const [to] = this.adjustFromTo(p, timestamp!, 1)
-        const [from] = this.adjustFromTo(p, to, 500)
+        const [from, to] = this.adjustFromTo(p, timestamp!, 500)
         const kLineDataList = await this._datafeed.getHistoryKLineData(s, p, from, to)
         callback(kLineDataList, kLineDataList.length > 0)
         this._loading = false

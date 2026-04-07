@@ -15,7 +15,7 @@ const IDLE_RECONNECT_MS = 50_000
 /** 错误重连最大次数 */
 const MAX_ERROR_RETRY = 10
 /** 与 ChartDataLoader.adjustFromTo 的 count 对齐 */
-const HISTORY_KLINE_LIMIT = 500
+const HISTORY_KLINE_LIMIT = 300
 
 type StreamPayload = { data?: { Stream?: { kline?: Kline } } }
 type SubscriptionHandle = { unsubscribe: () => void }
@@ -201,15 +201,24 @@ export function createApiDatafeed(apolloClient: ApolloClient): Datafeed {
 
   return {
     searchSymbols(search?: string): Promise<SymbolInfo[]> {
-      const exchange = import.meta.env.VITE_KLINE_EXCHANGE ?? 'binance'
-      const ticker = import.meta.env.VITE_KLINE_SYMBOL ?? 'BTC/USDT:FUTURE'
       const all: SymbolInfo[] = [
         {
-          ticker,
-          name: ticker,
-          shortName: ticker,
-          market: exchange,
-          exchange,
+          ticker: 'BTC/USDT:FUTURE',
+          name: 'BTC/USDT:FUTURE',
+          shortName: 'BTC/USDT:FUTURE',
+          market: 'binance',
+          exchange: 'binance',
+          pricePrecision: 2,
+          volumePrecision: 2,
+          priceCurrency: 'USDT',
+          type: 'crypto',
+        },
+        {
+          ticker: 'BTC/USDT:FUTURE',
+          name: 'BTC/USDT:FUTURE',
+          shortName: 'BTC/USDT:FUTURE',
+          market: 'okx',
+          exchange: 'okx',
           pricePrecision: 2,
           volumePrecision: 2,
           priceCurrency: 'USDT',
@@ -239,7 +248,6 @@ export function createApiDatafeed(apolloClient: ApolloClient): Datafeed {
           exchange,
           symbol: sym,
           interval,
-          startTime: from,
           endTime: to,
           limit: HISTORY_KLINE_LIMIT,
         })
