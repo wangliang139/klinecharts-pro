@@ -25,10 +25,10 @@ import {
   dispose,
   FormatDateParams,
   Indicator,
+  SymbolInfo as KLineSymbolInfo,
   OverlayMode,
   PickPartial,
   Styles,
-  SymbolInfo as KLineSymbolInfo,
   TooltipFeatureStyle,
   utils
 } from 'klinecharts'
@@ -269,25 +269,43 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   })
 
   createEffect((prev?: PrevSymbolPeriod) => {
-    // console.info('symbol or period changed effect', symbol(), period(), prev)
     const s = symbol()
     const p = period()
-
-    if (prev !== undefined && (prev.period.span !== p!.span || prev.period.type !== p!.type)) {
-      // console.info('period changed: set period', p)
-      instanceApi()?.setPeriod(p!)
+    const api = instanceApi()
+    if (!s || !p) {
+      return { symbol: s!, period: p! }
     }
-    if (prev !== undefined && prev.symbol?.ticker !== s!.ticker) {
-      // console.info('ticker changed: set symbol', s)
+
+    const periodChanged =
+      prev !== undefined &&
+      (prev.period.span !== p.span ||
+        prev.period.type !== p.type ||
+        prev.period.text !== p.text)
+
+    const symbolKeyChanged =
+      prev !== undefined &&
+      (prev.symbol?.ticker !== s.ticker ||
+        (prev.symbol?.pricePrecision ?? 2) !== (s.pricePrecision ?? 2) ||
+        (prev.symbol?.volumePrecision ?? 0) !== (s.volumePrecision ?? 0))
+
+    if (prev !== undefined && prev.symbol?.ticker !== s.ticker) {
       setSelectedOverlay(null)
     }
-    instanceApi()?.setSymbol({
-      ...s!,
-      pricePrecision: s?.pricePrecision ?? 2,
-      volumePrecision: s?.volumePrecision ?? 0,
-    } as PickPartial<KLineSymbolInfo, 'pricePrecision' | 'volumePrecision'>)
 
-    return { symbol: s!, period: p! }
+    if (periodChanged) {
+      api?.setPeriod(p)
+    }
+
+    const onlyPeriodChanged = periodChanged && !symbolKeyChanged
+    if (!onlyPeriodChanged) {
+      api?.setSymbol({
+        ...s,
+        pricePrecision: s.pricePrecision ?? 2,
+        volumePrecision: s.volumePrecision ?? 0,
+      } as PickPartial<KLineSymbolInfo, 'pricePrecision' | 'volumePrecision'>)
+    }
+
+    return { symbol: s, period: p }
   })
 
   createEffect(() => {
