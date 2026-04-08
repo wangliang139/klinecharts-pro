@@ -29,6 +29,7 @@ import {
   Position,
   ProChart,
   SymbolInfo,
+  WarningItem,
 } from './types/types'
 
 const Logo = (
@@ -82,6 +83,9 @@ export default class KLineChartPro implements ChartPro {
           mainIndicators={options.mainIndicators ?? ['MA']}
           subIndicators={options.subIndicators ?? ['VOL']}
           dataTimestamp={options.dataTimestamp ?? new Date().getTime()}
+          warnings={options.warnings ?? []}
+          onAddWarning={options.onAddWarning ?? (() => {})}
+          onRemoveWarning={options.onRemoveWarning ?? (() => {})}
           rootElementId={options.rootElementId ?? this._container?.id ?? ''}
           dataloader={dataLoader} />
       ),
@@ -176,5 +180,9 @@ export default class KLineChartPro implements ChartPro {
 
   setHisOrders(orders: HisOrder[]): void {
     this._chartApi?.setHisOrders(orders)
+  }
+
+  setWarnings(warnings: WarningItem[]): void {
+    this._chartApi?.setWarnings(warnings)
   }
 }

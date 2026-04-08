@@ -72,7 +72,8 @@ import {
   SubIndicatorMap
 } from './store/chartProIndicatorHandlers'
 import { HIS_ORDER_HOVER_EVENT } from './extension/trading/constants'
-import { HisOrder, PendingOrder, Period, Position, SymbolInfo } from './types/types'
+import { setPriceWarningOverlayHandlers } from './extension/trading/priceWarningLine'
+import { HisOrder, PendingOrder, Period, Position, SymbolInfo, WarningItem, WarningType } from './types/types'
 const { createIndicator, pushOverlay, restoreChartState } = useChartState()
 
 interface PrevSymbolPeriod {
@@ -81,6 +82,8 @@ interface PrevSymbolPeriod {
 }
 const TRADING_RESYNC_DELAYS = [0, 120, 360, 900] as const
 const HIS_ORDER_HOVER_HIDE_DELAY = 120
+const WARNING_OVERLAY_GROUP = 'warning_overlays'
+const WARNING_PRICE_TYPES: WarningType[] = ['price_reach', 'price_rise_to', 'price_fall_to']
 
 function buildTooltipFeatureStyles(color: string) {
   return {
@@ -201,11 +204,13 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   const [timezone, setTimezone] = createSignal<SelectDataSourceItem>({ key: props.timezone, text: translateTimezone(props.timezone, props.locale) })
 
   const [settingModalVisible, setSettingModalVisible] = createSignal(false)
+  const [settingInitialTab, setSettingInitialTab] = createSignal<'trading' | 'warning'>('trading')
   const [widgetDefaultStyles, setWidgetDefaultStyles] = createSignal<Styles>()
 
   const [screenshotUrl, setScreenshotUrl] = createSignal('')
 
   const [drawingBarVisible, setDrawingBarVisible] = createSignal(props.drawingBarVisible)
+  const [warnings, setWarnings] = createSignal<WarningItem[]>([...(props.warnings ?? [])])
 
   const [symbolSearchModalVisible, setSymbolSearchModalVisible] = createSignal(false)
   const [hisOrderHoverVisible, setHisOrderHoverVisible] = createSignal(false)
@@ -218,6 +223,63 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   let lastExternalStyles: ReturnType<typeof styles>
 
   const [indicatorSettingModalParams, setIndicatorSettingModalParams] = createSignal<IndicatorSettingParams>(DEFAULT_INDICATOR_SETTING_PARAMS)
+  const safeOverlaySegment = (key: string) => key.replace(/[^a-zA-Z0-9_-]/g, '_')
+
+  const syncWarningOverlays = () => {
+    const api = instanceApi()
+    const currentSymbol = symbol()
+    if (!api || !currentSymbol) return
+    const lastTs = api.getDataList().at(-1)?.timestamp ?? Date.now()
+    const currentWarnings = warnings()
+    const priceWarnings = currentWarnings.filter((warning) => {
+      if (!WARNING_PRICE_TYPES.includes(warning.type)) return false
+      if (!Number.isFinite(warning.price)) return false
+      if (warning.symbol && warning.symbol !== currentSymbol.ticker) return false
+      return true
+    })
+    const aliveIds = new Set<string>()
+    priceWarnings.forEach((warning, index) => {
+      const idSuffix = safeOverlaySegment(warning.id || `idx_${index}`)
+      const id = `warning-${idSuffix}`
+      aliveIds.add(id)
+      const existing = (api.getOverlays({ id }) ?? []).length > 0
+      const payload = {
+        id,
+        name: 'priceWarningLine',
+        groupId: WARNING_OVERLAY_GROUP,
+        paneId: 'candle_pane' as const,
+        mode: 'normal' as const,
+        points: [{ timestamp: lastTs, value: warning.price! }],
+        extendData: { warning, showInfo: false },
+      }
+      if (!existing) {
+        api.createOverlay(payload)
+      } else {
+        api.overrideOverlay({
+          id,
+          points: payload.points,
+          extendData: payload.extendData,
+        })
+      }
+    })
+    const existing = api.getOverlays({ groupId: WARNING_OVERLAY_GROUP }) ?? []
+    existing.forEach((item) => {
+      if (item.id && !aliveIds.has(item.id)) {
+        api.removeOverlay({ id: item.id })
+      }
+    })
+  }
+
+  const handleRemoveWarning = async (warning: WarningItem) => {
+    await props.onRemoveWarning?.(warning)
+  }
+
+  setPriceWarningOverlayHandlers({
+    onRemove: (warning) => {
+      void handleRemoveWarning(warning)
+    },
+  })
+
 
 
   setPeriod(props.period)
@@ -282,6 +344,10 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
     setLiqPrice: (price: number | null) => { setLiquidationPriceData(price, instanceApi()) },
     setOpenOrders: (list: PendingOrder[]) => { setOpenOrdersData(list, instanceApi()) },
     setHisOrders: (list: HisOrder[]) => { setHisOrdersData(list, instanceApi()) },
+    setWarnings: (list: WarningItem[]) => {
+      setWarnings([...list])
+      syncWarningOverlays()
+    },
   }
 
   props.ref(exposedApi)
@@ -384,6 +450,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
       bindTradingStore(instanceApi()!)
       loadTradingConfigFromStorage(instanceApi())
       syncTradingOverlays(instanceApi())
+      syncWarningOverlays()
 
       const s = symbol()
       if (s?.priceCurrency) {
@@ -466,6 +533,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
         api?.resize()
       }
     }
+    syncWarningOverlays()
 
     return { symbol: s, period: p }
   })
@@ -503,6 +571,11 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
     if (!nextStyles || lastExternalStyles === nextStyles) return
     lastExternalStyles = nextStyles
     api.setStyles(nextStyles)
+  })
+
+  createEffect(() => {
+    warnings()
+    syncWarningOverlays()
   })
 
   createEffect(() => {
@@ -555,7 +628,11 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
         <SettingModal
           locale={props.locale}
           currentStyles={utils.clone(instanceApi()!.getStyles())}
+          warnings={warnings()}
+          initialSettingKey={settingInitialTab()}
           onClose={() => { setSettingModalVisible(false) }}
+          onAddWarning={props.onAddWarning}
+          onRemoveWarning={handleRemoveWarning}
           onChange={style => {
             instanceApi()?.setStyles(style)
           }}
@@ -608,7 +685,14 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
         onPeriodChange={setPeriod}
         onIndicatorClick={() => { setIndicatorModalVisible((visible => !visible)) }}
         onTimezoneClick={() => { setTimezoneModalVisible((visible => !visible)) }}
-        onSettingClick={() => { setSettingModalVisible((visible => !visible)) }}
+        onWarningClick={() => {
+          setSettingInitialTab('warning')
+          setSettingModalVisible(true)
+        }}
+        onSettingClick={() => {
+          setSettingInitialTab('trading')
+          setSettingModalVisible((visible => !visible))
+        }}
         onScreenshotClick={() => {
           if (instanceApi()) {
             const url = instanceApi()!.getConvertPictureUrl(true, 'jpeg', props.theme === 'dark' ? '#151517' : '#ffffff')

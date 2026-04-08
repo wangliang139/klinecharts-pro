@@ -35,7 +35,12 @@ import {
   PositionSide,
   ProChart,
   SymbolInfo,
-  TradingConfig
+  TradingConfig,
+  WarningFrequency,
+  WarningItem,
+  WarningItemInput,
+  WarningType,
+  WarningWindow
 } from './types/types'
 
 import './index.less'
@@ -51,5 +56,5 @@ export {
   load as loadLocales
 }
 
-export type { ChartObjType, ChartPro, ChartProOptions, Datafeed, DatafeedSubscribeCallback, HisOrder, PendingOrder, Period, Position, PositionSide, ProChart, SymbolInfo, TradingConfig }
+export type { ChartObjType, ChartPro, ChartProOptions, Datafeed, DatafeedSubscribeCallback, HisOrder, PendingOrder, Period, Position, PositionSide, ProChart, SymbolInfo, TradingConfig, WarningFrequency, WarningItem, WarningItemInput, WarningType, WarningWindow }
 

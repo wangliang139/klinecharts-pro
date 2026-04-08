@@ -120,6 +120,30 @@ export interface HisOrder {
   pnl?: number;
 }
 
+export type WarningType =
+  | "price_reach"
+  | "price_rise_to"
+  | "price_fall_to"
+  | "price_rise_pct_over"
+  | "price_fall_pct_over";
+
+export type WarningFrequency = "repeat" | "once";
+
+export type WarningWindow = "5m" | "1h" | "4h" | "24h";
+
+export interface WarningItem {
+  id: string;
+  type: WarningType;
+  frequency: WarningFrequency;
+  price?: number;
+  window?: WarningWindow;
+  percent?: number;
+  remark?: string;
+  symbol?: string;
+}
+
+export type WarningItemInput = Omit<WarningItem, "id"> & { id?: string };
+
 export type PositionSide = "long" | "short";
 
 export interface Position {
@@ -166,6 +190,9 @@ export interface ChartProOptions {
   datafeed: Datafeed;
   dataTimestamp?: number;
   overrides?: DeepPartial<PaneProperties>;
+  warnings?: WarningItem[];
+  onAddWarning?: (warning: WarningItemInput) => void | Promise<void>;
+  onRemoveWarning?: (warning: WarningItem) => void | Promise<void>;
 }
 
 export interface ChartPro {
@@ -188,4 +215,5 @@ export interface ChartPro {
   setLiqPrice(price: number | null): void;
   setOpenOrders(orders: PendingOrder[]): void;
   setHisOrders(orders: HisOrder[]): void;
+  setWarnings(warnings: WarningItem[]): void;
 }
