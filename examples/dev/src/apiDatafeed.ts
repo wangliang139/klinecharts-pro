@@ -77,6 +77,54 @@ function klineToKLineDataItem(k: Kline): KLineData | null {
   }
 }
 
+/** 与 Apollo `isApolloError` 一致，避免从 Vite 预构建的 `@apollo/client` 入口取 `ApolloError` 时缺失导出 */
+function isApolloLikeError(
+  e: unknown,
+): e is {
+  graphQLErrors?: ReadonlyArray<{ message?: string; extensions?: Record<string, unknown> }>
+  networkError?: { statusCode?: number }
+} {
+  return typeof e === 'object' && e !== null && Object.prototype.hasOwnProperty.call(e, 'graphQLErrors')
+}
+
+/** graphql-ws 关闭码 4401=未授权；HTTP 401/403；GraphQL extensions.code */
+function isLikelyAuthFailure(e: unknown): boolean {
+  if (e && typeof e === 'object' && 'code' in e) {
+    const code = Number((e as { code: number }).code)
+    if (code === 4401 || code === 4403 || code === 401 || code === 403) return true
+  }
+
+  if (isApolloLikeError(e)) {
+    for (const err of e.graphQLErrors ?? []) {
+      const ext = String(err.extensions?.code ?? '').toUpperCase()
+      if (ext === 'UNAUTHENTICATED' || ext === 'FORBIDDEN') return true
+      const m = (err.message ?? '').toLowerCase()
+      if (m.includes('unauthenticated') || m.includes('unauthorized')) return true
+      if (
+        (m.includes('token') || m.includes('jwt')) &&
+        (m.includes('expir') || m.includes('invalid') || m.includes('revoked'))
+      )
+        return true
+    }
+    const ne = e.networkError
+    if (ne?.statusCode === 401 || ne?.statusCode === 403) return true
+  }
+
+  const msg = e instanceof Error ? e.message : typeof e === 'string' ? e : ''
+  if (!msg) return false
+  const lower = msg.toLowerCase()
+  if (/\b4401\b/.test(msg) || /\b4403\b/.test(msg) || /\b401\b/.test(msg) || /\b403\b/.test(msg)) return true
+  if (lower.includes('unauthorized') || lower.includes('unauthenticated')) return true
+  if (
+    (lower.includes('token') || lower.includes('jwt')) &&
+    (lower.includes('expir') || lower.includes('invalid') || lower.includes('revoked'))
+  )
+    return true
+  if (lower.includes('认证') && (lower.includes('失败') || lower.includes('无效'))) return true
+  if (lower.includes('未授权')) return true
+  return false
+}
+
 function shouldSkipKlineByInterval(
   eventInterval: string | undefined,
   currentPeriod: string | undefined,
@@ -101,6 +149,8 @@ export function createApiDatafeed(apolloClient: ApolloClient): Datafeed {
   let currentCallback: DatafeedSubscribeCallback | null = null
   let isReconnecting = false
   let errorRetryCount = 0
+  /** Token 等认证被拒后不再自动重连/空闲重连，直至用户再次 subscribe */
+  let fatalAuthError = false
 
   const snapshot: { exchange: string; symbol: string; period: string } = {
     exchange: '',
@@ -109,7 +159,7 @@ export function createApiDatafeed(apolloClient: ApolloClient): Datafeed {
   }
 
   const doSubscribe = () => {
-    if (!snapshot.exchange || !snapshot.symbol || !currentCallback) return
+    if (fatalAuthError || !snapshot.exchange || !snapshot.symbol || !currentCallback) return
     const variables = {
       input: {
         type: 'kline' as const,
@@ -122,6 +172,7 @@ export function createApiDatafeed(apolloClient: ApolloClient): Datafeed {
       .subscribe({ query: SUB_STREAM, variables })
       .subscribe({
         next: (payload: StreamPayload) => {
+          errorRetryCount = 0
           const nextKline = payload?.data?.Stream?.kline
           if (!nextKline) return
           if (shouldSkipKlineByInterval(nextKline.interval, snapshot.period)) return
@@ -135,19 +186,35 @@ export function createApiDatafeed(apolloClient: ApolloClient): Datafeed {
         },
         error: (e: unknown) => {
           console.error('[ApiDatafeed] 订阅失败', e)
+          if (isLikelyAuthFailure(e)) {
+            fatalAuthError = true
+            if (reconnectTimer) {
+              clearTimeout(reconnectTimer)
+              reconnectTimer = null
+            }
+            try {
+              sub?.unsubscribe()
+            } catch {
+              /* ignore */
+            }
+            sub = null
+            console.warn(
+              '[ApiDatafeed] 服务端拒绝认证（Bearer 无效或已过期）。已停止自动重试；请更新 VITE_GRAPHQL_AUTH_TOKEN 后刷新页面或重新订阅。',
+            )
+            return
+          }
           scheduleErrorReconnect()
         },
       })
     sub = handle
     lastReceiveTime = Date.now()
-    errorRetryCount = 0
     startReconnectTimer()
   }
 
   const startReconnectTimer = () => {
     if (reconnectTimer) clearTimeout(reconnectTimer)
     reconnectTimer = setTimeout(() => {
-      if (!currentCallback) return
+      if (!currentCallback || fatalAuthError) return
       const diff = Date.now() - lastReceiveTime
       if (diff >= IDLE_RECONNECT_MS) {
         console.log('[ApiDatafeed] 长时间未收到数据，尝试重新订阅...')
@@ -168,7 +235,7 @@ export function createApiDatafeed(apolloClient: ApolloClient): Datafeed {
   }
 
   const scheduleErrorReconnect = () => {
-    if (!currentCallback) return
+    if (!currentCallback || fatalAuthError) return
     if (errorRetryCount >= MAX_ERROR_RETRY) {
       console.warn('[ApiDatafeed] 订阅多次重试失败，停止自动重连')
       return
@@ -262,16 +329,30 @@ export function createApiDatafeed(apolloClient: ApolloClient): Datafeed {
     },
 
     subscribe(symbol: SymbolInfo, period: Period, callback: DatafeedSubscribeCallback): void {
+      const exchange = symbol.exchange ?? symbol.market
+      const sym = symbol.ticker
+      const periodText = period.text || '1m'
+      if (!exchange || !sym) return
+
+      fatalAuthError = false
+
+      // 避免图表重复以相同参数订阅时先退订再订阅，导致 lazy WebSocket 反复开关与 connection_init 风暴
+      if (
+        sub !== null &&
+        currentCallback === callback &&
+        snapshot.exchange === exchange &&
+        snapshot.symbol === sym &&
+        snapshot.period === periodText
+      ) {
+        return
+      }
+
       console.log('[ApiDatafeed] subscribe', symbol, period, callback)
       this.unsubscribe(symbol, period)
 
-      const exchange = symbol.exchange ?? symbol.market
-      const sym = symbol.ticker
-      if (!exchange || !sym) return
-
       snapshot.exchange = exchange
       snapshot.symbol = sym
-      snapshot.period = period.text || '1m'
+      snapshot.period = periodText
 
       currentCallback = callback
       lastReceiveTime = Date.now()
@@ -282,6 +363,7 @@ export function createApiDatafeed(apolloClient: ApolloClient): Datafeed {
     },
 
     unsubscribe(_symbol: SymbolInfo, _period: Period): void {
+      fatalAuthError = false
       clearReconnectTimer()
       currentCallback = null
       if (sub) {

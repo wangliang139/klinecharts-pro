@@ -38,7 +38,7 @@ const chart = new KLineChartPro({
     { span: 1, type: 'day', text: '1d' },
   ],
   datafeed,
-  theme: 'dark',
+  theme: 'light',
   locale: 'zh-CN',
   drawingBarVisible: false,
 })

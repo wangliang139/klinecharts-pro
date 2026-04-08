@@ -2,17 +2,15 @@ html,
 body {
   margin: 0;
   height: 100%;
-  background: #1a1a1a;
 }
 
 #app {
   height: 100%;
   box-sizing: border-box;
-  padding: 12px;
 }
 
 .chart-wrap {
   width: 100%;
   height: min(720px, calc(100vh - 24px));
-  min-height: 400px;
+  min-height: 300px;
 }
