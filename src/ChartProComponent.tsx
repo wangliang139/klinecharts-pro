@@ -24,12 +24,10 @@ import {
 import {
   dispose,
   FormatDateParams,
-  Indicator,
   SymbolInfo as KLineSymbolInfo,
   OverlayMode,
   PickPartial,
   Styles,
-  TooltipFeatureStyle,
   utils
 } from 'klinecharts'
 
@@ -67,6 +65,12 @@ import {
   syncTradingOverlays
 } from './store/tradingStore'
 import { createHisOrderHoverController, createResyncScheduler } from './store/tradingEffects'
+import {
+  createChartIndicatorHandlers,
+  DEFAULT_INDICATOR_SETTING_PARAMS,
+  IndicatorSettingParams,
+  SubIndicatorMap
+} from './store/chartProIndicatorHandlers'
 import { HIS_ORDER_HOVER_EVENT } from './extension/trading/constants'
 import { HisOrder, PendingOrder, Period, Position, SymbolInfo } from './types/types'
 const { createIndicator, pushOverlay, restoreChartState } = useChartState()
@@ -75,18 +79,10 @@ interface PrevSymbolPeriod {
   symbol: SymbolInfo
   period: Period
 }
-type SubIndicatorMap = Record<string, string>
-type IndicatorSettingParams = {
-  visible: boolean
-  indicatorName: string
-  paneId: string
-  calcParams: Indicator['calcParams']
-}
-
 const TRADING_RESYNC_DELAYS = [0, 120, 360, 900] as const
 const HIS_ORDER_HOVER_HIDE_DELAY = 120
 
-function buildTooltipFeatureStyles (color: string) {
+function buildTooltipFeatureStyles(color: string) {
   return {
     indicator: {
       tooltip: {
@@ -221,11 +217,9 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   let widgetDefaultStylesCaptured = false
   let lastExternalStyles: ReturnType<typeof styles>
 
-  const [indicatorSettingModalParams, setIndicatorSettingModalParams] = createSignal<IndicatorSettingParams>({
-    visible: false, indicatorName: '', paneId: '', calcParams: []
-  })
+  const [indicatorSettingModalParams, setIndicatorSettingModalParams] = createSignal<IndicatorSettingParams>(DEFAULT_INDICATOR_SETTING_PARAMS)
 
-  
+
   setPeriod(props.period)
   setSymbol(props.symbol)
 
@@ -241,6 +235,16 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
     () => syncTradingOverlays(instanceApi()),
     TRADING_RESYNC_DELAYS
   )
+  const indicatorHandlers = createChartIndicatorHandlers({
+    getApi: () => instanceApi(),
+    mainIndicators,
+    setMainIndicators,
+    subIndicators,
+    setSubIndicators,
+    indicatorSettingModalParams,
+    setIndicatorSettingModalParams,
+    createIndicator
+  })
 
   const disposeChart = () => {
     if (isDisposed) return
@@ -363,41 +367,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
         // console.info('onCrosshairFeatureClick', data)
       })
 
-      instanceApi()?.subscribeAction('onIndicatorTooltipFeatureClick', (data) => {
-        // console.info('onIndicatorTooltipFeatureClick', data)
-        const _data = data as { paneId: string, feature: TooltipFeatureStyle, indicator: Indicator }
-        switch (_data.feature.id) {
-          case 'visible': {
-            instanceApi()?.overrideIndicator({ name: _data.indicator.name, visible: true, paneId: _data.paneId })
-            break
-          }
-          case 'invisible': {
-            instanceApi()?.overrideIndicator({ name: _data.indicator.name, visible: false, paneId: _data.paneId })
-            break
-          }
-          case 'setting': {
-            const indicator = instanceApi()?.getIndicators({ paneId: _data.paneId, name: _data.indicator.name, id: _data.indicator.id }).at(0)
-            if (!indicator) return
-            setIndicatorSettingModalParams({
-              visible: true, indicatorName: _data.indicator.name, paneId: _data.paneId, calcParams: indicator.calcParams
-            })
-            break
-          }
-          case 'close': {
-            if (_data.paneId === 'candle_pane') {
-              const newMainIndicators = [...mainIndicators()]
-              instanceApi()?.removeIndicator({ paneId: _data.paneId, name: _data.indicator.name, id: _data.indicator.id })
-              newMainIndicators.splice(newMainIndicators.indexOf(_data.indicator.name), 1)
-              setMainIndicators(newMainIndicators)
-            } else {
-              const newIndicators = { ...subIndicators() }
-              instanceApi()?.removeIndicator({ paneId: _data.paneId, name: _data.indicator.name, id: _data.indicator.id })
-              delete newIndicators[_data.indicator.name]
-              setSubIndicators(newIndicators)
-            }
-          }
-        }
-      })
+      instanceApi()?.subscribeAction('onIndicatorTooltipFeatureClick', indicatorHandlers.onIndicatorTooltipFeatureClick)
 
       instanceApi()?.subscribeAction('onCandleTooltipFeatureClick', (data) => {
         // console.info('onCandleTooltipFeatureClick', data)
@@ -570,33 +540,8 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
           mainIndicators={mainIndicators()}
           subIndicators={subIndicators()}
           onClose={() => { setIndicatorModalVisible(false) }}
-          onMainIndicatorChange={data => {
-            const newMainIndicators = [...mainIndicators()]
-            if (data.added) {
-              createIndicator(instanceApi()!, data.name, true, { id: 'candle_pane' })
-              newMainIndicators.push(data.name)
-            } else {
-              instanceApi()?.removeIndicator({ name: data.name, paneId: 'candle_pane', id: data.id ?? undefined })
-              newMainIndicators.splice(newMainIndicators.indexOf(data.name), 1)
-            }
-            setMainIndicators(newMainIndicators)
-          }}
-          onSubIndicatorChange={data => {
-            // console.info('onSubIndicatorChange', data)
-            const newSubIndicators = { ...subIndicators() }
-            if (data.added) {
-              const id = createIndicator(instanceApi()!, data.name)
-              if (id) {
-                newSubIndicators[data.name] = id
-              }
-            } else {
-              if (data.id) {
-                instanceApi()?.removeIndicator({ name: data.name, id: data.id })
-                delete newSubIndicators[data.name]
-              }
-            }
-            setSubIndicators(newSubIndicators)
-          }} />
+          onMainIndicatorChange={indicatorHandlers.onMainIndicatorChange}
+          onSubIndicatorChange={indicatorHandlers.onSubIndicatorChange} />
       </Show>
       <Show when={timezoneModalVisible()}>
         <TimezoneModal
@@ -635,11 +580,8 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
         <IndicatorSettingModal
           locale={props.locale}
           params={indicatorSettingModalParams()}
-          onClose={() => { setIndicatorSettingModalParams({ visible: false, indicatorName: '', paneId: '', calcParams: [] }) }}
-          onConfirm={(params) => {
-            const modalParams = indicatorSettingModalParams()
-            instanceApi()?.overrideIndicator({ name: modalParams.indicatorName, calcParams: params, paneId: modalParams.paneId })
-          }}
+          onClose={() => { setIndicatorSettingModalParams(DEFAULT_INDICATOR_SETTING_PARAMS) }}
+          onConfirm={indicatorHandlers.onIndicatorSettingConfirm}
         />
       </Show>
       <Show when={hisOrderHoverVisible() && !!hisOrderHoverData()}>

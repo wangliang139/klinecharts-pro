@@ -1,5 +1,4 @@
 import { LineStyle, StateTextStyle } from 'klinecharts';
-import { createSignal } from 'solid-js';
 
 export const point = {
 	color: '#1677FF',
@@ -88,71 +87,3 @@ export const positionStyle: { lineStyle: LineStyle, labelStyle: StateTextStyle} 
 		show: true,
 	}
 }
-
-// export const [pointStyle, setPointStyle] = createSignal({
-// 	point
-// })
-
-// export const [horizontalStraightLineStyle, setHorizontalStraightLineStyle] = createSignal({
-// 	line
-// })
-
-// export const [horizontalSegmentStyle, setHorizontalSegmentStyle] = createSignal({
-// 	line
-// })
-
-// export const [horizontalRayLineStyle, setHorizontalRayLineStyle] = createSignal({
-// 	line
-// })
-
-// export const [verticalRayLineStyle, setVerticalRayLineStyle] = createSignal({
-// 	line
-// })
-
-// export const [verticalSegmentStyle, setVerticalSegmentStyle] = createSignal({
-// 	line
-// })
-
-// export const [verticalStraightLineStyle, setVerticalStraightLineStyle] = createSignal({
-// 	line
-// })
-
-// export const [rayLineStyle, setRayLineStyle] = createSignal({
-// 	line
-// })
-
-// export const [segmentStyle, setSegmentStyle] = createSignal({
-// 	line
-// })
-
-// export const [arrowStyle, setArrowStyle] = createSignal({
-// 	line
-// })
-
-// export const [priceLineStyle, setPriceLineStyle] = createSignal({
-// 	line
-// })
-
-// export const [straightLineStyle, setStraightLineStyle] = createSignal({
-// 	line
-// })
-
-// export const [rectStyle, setRectStyle] = createSignal({
-// 	polygon
-// })
-
-// export const [polygonStyle, setPolygonStyle] = createSignal({
-// 	polygon
-// })
-
-// export const [circleStyle, setCircleStyle] = createSignal({
-// 	circle
-// })
-
-// export const [arcStyle, setArcStyle] = createSignal({
-//  	arc
-// })
-
-// export const [textStyle, setTextStyle] = createSignal({
-// 	text
-// })
