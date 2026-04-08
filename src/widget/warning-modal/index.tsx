@@ -1,38 +1,15 @@
 import { Component, createSignal, For, Show } from 'solid-js'
 
 import { Modal } from '../../component'
-import { WarningFrequency, WarningItem, WarningItemInput, WarningType, WarningWindow } from '../../types/types'
+import { WarningItem, WarningItemInput } from '../../types/types'
 import WarningAddModal from '../warning-add-modal'
+import { WarningDetailFields } from '../warning-detail-fields'
 
 export interface WarningModalProps {
   warnings: WarningItem[]
   onClose: () => void
   onAddWarning?: (warning: WarningItemInput) => void | Promise<void>
   onRemoveWarning?: (warning: WarningItem) => void | Promise<void>
-}
-
-function labelWarningType(t: WarningType): string {
-  switch (t) {
-    case 'price_reach': return '价格达到'
-    case 'price_rise_to': return '价格上涨至'
-    case 'price_fall_to': return '价格下跌至'
-    case 'price_rise_pct_over': return '价格涨幅超过'
-    case 'price_fall_pct_over': return '价格跌幅超过'
-  }
-}
-
-function labelFrequency(f: WarningFrequency): string {
-  return f === 'repeat' ? '重复提醒' : '仅提醒一次'
-}
-
-function labelWindow(w: WarningWindow | undefined): string {
-  switch (w) {
-    case '5m': return '5分'
-    case '1h': return '1小时'
-    case '4h': return '4小时'
-    case '24h': return '24小时'
-    default: return '—'
-  }
 }
 
 function summaryLine(warning: WarningItem): string {
@@ -106,30 +83,7 @@ const WarningModal: Component<WarningModalProps> = (props) => {
             onClose={() => { setDetail(null) }}
           >
             <div class="klinecharts-pro-warning-detail">
-              <dl class="warning-detail-grid">
-                <Show when={!!w().symbol}>
-                  <dt>标的</dt>
-                  <dd>{w().symbol}</dd>
-                </Show>
-                <dt>类型</dt>
-                <dd>{labelWarningType(w().type)}</dd>
-                <Show when={w().price != null && Number.isFinite(w().price)}>
-                  <dt>价格</dt>
-                  <dd>{String(w().price)}</dd>
-                </Show>
-                <Show when={w().window != null}>
-                  <dt>时间窗口</dt>
-                  <dd>{labelWindow(w().window)}</dd>
-                </Show>
-                <Show when={w().percent != null}>
-                  <dt>百分比</dt>
-                  <dd>{`${w().percent}%`}</dd>
-                </Show>
-                <dt>频率</dt>
-                <dd>{labelFrequency(w().frequency)}</dd>
-                <dt>备注</dt>
-                <dd>{w().remark?.trim() ? w().remark : '—'}</dd>
-              </dl>
+              <WarningDetailFields warning={w()} />
             </div>
           </Modal>
         )}

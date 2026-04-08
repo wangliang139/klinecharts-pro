@@ -2,6 +2,7 @@ import { Coordinate, LineStyle, OverlayEvent, OverlayTemplate, utils } from "kli
 
 import { formatWesternGrouped } from "../../helpers";
 import { WarningItem } from "../../types/types";
+import { WARNING_DETAIL_OPEN_EVENT } from "./constants";
 import { isPriceInVisibleCandleRange } from "./chartVisibleRange";
 
 const WARNING_COLOR = "#bfbfbf";
@@ -225,6 +226,20 @@ const priceWarningLine = (): OverlayTemplate => ({
   },
   onRightClick: (event: OverlayEvent<unknown>) => {
     if (event.preventDefault) event.preventDefault();
+    return false;
+  },
+  onDoubleClick: (event: OverlayEvent<unknown>) => {
+    if (event.figure?.key !== "warning-info-text") {
+      return false;
+    }
+    if (event.preventDefault) event.preventDefault();
+    const ext = (event.overlay.extendData ?? {}) as WarningExtendData;
+    if (!ext.warning) {
+      return false;
+    }
+    window.dispatchEvent(
+      new CustomEvent(WARNING_DETAIL_OPEN_EVENT, { detail: { warning: ext.warning } }),
+    );
     return false;
   },
 });

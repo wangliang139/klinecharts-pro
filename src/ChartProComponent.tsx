@@ -34,7 +34,7 @@ import {
 import lodashClone from 'lodash/cloneDeep'
 import lodashSet from 'lodash/set'
 
-import { HisOrderHover, Loading, SelectDataSourceItem } from './component'
+import { HisOrderHover, Loading, Modal, SelectDataSourceItem } from './component'
 
 import {
   DrawingBar, IndicatorModal,
@@ -45,17 +45,27 @@ import {
   SymbolSearchModal,
   TimezoneModal
 } from './widget'
+import { WarningDetailFields } from './widget/warning-detail-fields'
 import WarningModal from './widget/warning-modal'
 
 import { translateTimezone } from './widget/timezone-modal/data'
 
 import Chart from './Chart'
+import { HIS_ORDER_HOVER_EVENT, WARNING_DETAIL_OPEN_EVENT } from './extension/trading/constants'
+import { setPriceWarningOverlayHandlers } from './extension/trading/priceWarningLine'
 import { formatTimeByTz } from './helpers'
+import {
+  createChartIndicatorHandlers,
+  DEFAULT_INDICATOR_SETTING_PARAMS,
+  IndicatorSettingParams,
+  SubIndicatorMap
+} from './store/chartProIndicatorHandlers'
 import { useChartState } from './store/chartStateStore'
 import {
   ChartProComponentProps, instanceApi, loadingVisible,
   period, setInstanceApi, setPeriod, setRooltelId, setSelectedOverlay, setStyles, setSymbol, styles, symbol
 } from './store/chartStore'
+import { createHisOrderHoverController, createResyncScheduler } from './store/tradingEffects'
 import {
   bindTradingStore,
   loadTradingConfigFromStorage,
@@ -65,15 +75,6 @@ import {
   setPositionsData,
   syncTradingOverlays
 } from './store/tradingStore'
-import { createHisOrderHoverController, createResyncScheduler } from './store/tradingEffects'
-import {
-  createChartIndicatorHandlers,
-  DEFAULT_INDICATOR_SETTING_PARAMS,
-  IndicatorSettingParams,
-  SubIndicatorMap
-} from './store/chartProIndicatorHandlers'
-import { HIS_ORDER_HOVER_EVENT } from './extension/trading/constants'
-import { setPriceWarningOverlayHandlers } from './extension/trading/priceWarningLine'
 import { HisOrder, PendingOrder, Period, Position, SymbolInfo, WarningItem, WarningType } from './types/types'
 const { createIndicator, pushOverlay, restoreChartState } = useChartState()
 
@@ -212,6 +213,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
 
   const [drawingBarVisible, setDrawingBarVisible] = createSignal(props.drawingBarVisible)
   const [warnings, setWarnings] = createSignal<WarningItem[]>([...(props.warnings ?? [])])
+  const [chartWarningDetail, setChartWarningDetail] = createSignal<WarningItem | null>(null)
 
   const [symbolSearchModalVisible, setSymbolSearchModalVisible] = createSignal(false)
   const [hisOrderHoverVisible, setHisOrderHoverVisible] = createSignal(false)
@@ -309,6 +311,13 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
     createIndicator
   })
 
+  const onWarningDetailOpen = (e: Event) => {
+    const d = (e as CustomEvent<{ warning: WarningItem }>).detail
+    if (d?.warning) {
+      setChartWarningDetail(d.warning)
+    }
+  }
+
   const disposeChart = () => {
     if (isDisposed) return
     isDisposed = true
@@ -319,6 +328,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
       resizeRafId = null
     }
     window.removeEventListener(HIS_ORDER_HOVER_EVENT, hoverController.onEvent as EventListener)
+    window.removeEventListener(WARNING_DETAIL_OPEN_EVENT, onWarningDetailOpen)
     window.removeEventListener('resize', documentResize)
     if (widgetRef) {
       dispose(widgetRef)
@@ -368,6 +378,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
 
   onMount(() => {
     window.addEventListener(HIS_ORDER_HOVER_EVENT, hoverController.onEvent as EventListener)
+    window.addEventListener(WARNING_DETAIL_OPEN_EVENT, onWarningDetailOpen)
     window.addEventListener('resize', documentResize)
     setInstanceApi(Chart.init(widgetRef!, {
       formatter: {
@@ -582,7 +593,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   createEffect(() => {
     const chartContainer = widgetRef as HTMLDivElement | undefined
     if (!chartContainer) return
-    if (!settingModalVisible() && !warningModalVisible()) return
+    if (!settingModalVisible() && !warningModalVisible() && !chartWarningDetail()) return
 
     const lockChartScroll = (event: Event) => {
       event.preventDefault()
@@ -632,6 +643,20 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
           onAddWarning={props.onAddWarning}
           onRemoveWarning={handleRemoveWarning}
         />
+      </Show>
+      <Show when={chartWarningDetail()}>
+        {(w) => (
+          <Modal
+            title="预警详情"
+            width={400}
+            height={260}
+            onClose={() => { setChartWarningDetail(null) }}
+          >
+            <div class="klinecharts-pro-warning-detail">
+              <WarningDetailFields warning={w()} />
+            </div>
+          </Modal>
+        )}
       </Show>
       <Show when={settingModalVisible()}>
         <SettingModal
