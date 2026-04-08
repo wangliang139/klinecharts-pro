@@ -41,8 +41,8 @@ const textLabel = (color: string): TextStyle => ({
   borderRadius: [2, 0, 0, 2],
   paddingLeft: 4,
   paddingRight: 4,
-  paddingTop: 2,
-  paddingBottom: 2,
+  paddingTop: 3,
+  paddingBottom: 3,
 });
 
 const qtyLabel = (color: string): TextStyle => ({
@@ -59,18 +59,18 @@ const qtyLabel = (color: string): TextStyle => ({
   borderRadius: [0, 2, 2, 0],
   paddingLeft: 4,
   paddingRight: 4,
-  paddingTop: 2,
-  paddingBottom: 2,
+  paddingTop: 3,
+  paddingBottom: 3,
 });
 
 /** 与 positionAvgLine Y 轴价签一致的底栏样式 */
 const axisPriceBox = (color: string): TextStyle => ({
-  style: "stroke_fill",
+  style: "fill",
   size: 12,
   family: "Arial, sans-serif",
   weight: "normal",
-  color: color,
-  backgroundColor: "rgba(255,255,255,0.5)",
+  color: "white",
+  backgroundColor: color,
   borderColor: color,
   borderStyle: "solid",
   borderSize: 1,
@@ -78,8 +78,8 @@ const axisPriceBox = (color: string): TextStyle => ({
   borderRadius: 2,
   paddingLeft: 4,
   paddingRight: 4,
-  paddingTop: 2,
-  paddingBottom: 2,
+  paddingTop: 3,
+  paddingBottom: 3,
 });
 
 const pendingOrderLine = (): OverlayTemplate => ({

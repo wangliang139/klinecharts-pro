@@ -31,8 +31,8 @@ const labelStyle: TextStyle = {
   borderRadius: 2,
   paddingLeft: 4,
   paddingRight: 4,
-  paddingTop: 2,
-  paddingBottom: 2,
+  paddingTop: 3,
+  paddingBottom: 3,
 };
 
 const yAxisLabelStyle: TextStyle = {
@@ -41,7 +41,7 @@ const yAxisLabelStyle: TextStyle = {
   family: "Arial, sans-serif",
   weight: "normal",
   color: "white",
-  backgroundColor: "rgba(22, 26, 32, 0.5)",
+  backgroundColor: LIQ_LINE,
   borderColor: LIQ_LINE,
   borderStyle: "solid",
   borderSize: 1,
@@ -49,8 +49,8 @@ const yAxisLabelStyle: TextStyle = {
   borderRadius: 2,
   paddingLeft: 4,
   paddingRight: 4,
-  paddingTop: 2,
-  paddingBottom: 2,
+  paddingTop: 3,
+  paddingBottom: 3,
 };
 
 const liquidationLine = (): OverlayTemplate => ({
