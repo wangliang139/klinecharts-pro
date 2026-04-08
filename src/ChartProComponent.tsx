@@ -36,7 +36,7 @@ import {
 import lodashClone from 'lodash/cloneDeep'
 import lodashSet from 'lodash/set'
 
-import { Loading, SelectDataSourceItem } from './component'
+import { HisOrderHover, Loading, SelectDataSourceItem } from './component'
 
 import {
   DrawingBar, IndicatorModal,
@@ -51,6 +51,7 @@ import {
 import { translateTimezone } from './widget/timezone-modal/data'
 
 import Chart from './Chart'
+import { formatTimeByTz } from './helpers'
 import { useChartState } from './store/chartStateStore'
 import {
   ChartProComponentProps, instanceApi, loadingVisible,
@@ -65,7 +66,6 @@ import {
   syncTradingOverlays
 } from './store/tradingStore'
 import { HisOrder, Period, SymbolInfo } from './types/types'
-import { formatTimeByTz } from './helpers'
 const { createIndicator, pushOverlay, restoreChartState } = useChartState()
 
 interface PrevSymbolPeriod {
@@ -596,34 +596,10 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
         />
       </Show>
       <Show when={hisOrderHoverVisible() && !!hisOrderHoverData()}>
-        <div style={{
-          position: 'fixed',
-          top: '84px',
-          right: '16px',
-          width: '180px',
-          padding: '10px 12px',
-          'border-radius': '8px',
-          border: `1px solid ${hisOrderHoverData()!.isBuy ? '#2ebd85' : '#f6465d'}`,
-          'background-color': '#ffffff',
-          'box-shadow': '0 8px 20px rgba(0, 0, 0, 0.14)',
-          'z-index': 10005,
-          'pointer-events': 'none',
-          'font-size': '12px',
-          color: '#1f2630',
-          display: 'flex',
-          'flex-direction': 'column',
-          gap: '2px'
-        }}>
-          <div style={{ 'font-weight': 700, color: hisOrderHoverData()!.isBuy ? '#2ebd85' : '#f6465d' }}>
-            {hisOrderHoverData()!.isBuy ? '买入 (B)' : '卖出 (S)'}
-          </div>
-          <div><strong>订单ID：</strong>{String(hisOrderHoverData()!.orderId ?? hisOrderHoverData()!.id ?? '-')}</div>
-          <div><strong>价格：</strong>{String(hisOrderHoverData()!.price)}</div>
-          <div><strong>数量：</strong>{String(hisOrderHoverData()!.size)}</div>
-          <div><strong>手续费：</strong>{String(hisOrderHoverData()!.fee ?? '-')}</div>
-          <div><strong>已实现盈亏：</strong>{String(hisOrderHoverData()!.pnl ?? '-')}</div>
-          <div><strong>成交时间：</strong>{formatTimeByTz(hisOrderHoverData()!.timestamp, props.locale, timezone().key)}</div>
-        </div>
+        <HisOrderHover
+          order={hisOrderHoverData()!}
+          formattedTime={formatTimeByTz(hisOrderHoverData()!.timestamp, props.locale, timezone().key)}
+        />
       </Show>
       <PeriodBar
         locale={props.locale}

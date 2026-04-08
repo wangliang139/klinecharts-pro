@@ -21,8 +21,9 @@ import Input from './input'
 import Loading from './loading'
 import Switch from './switch'
 import Color from './color'
+import HisOrderHover from './order'
 export {
-  Button, Checkbox, List, Modal, Select, Input, Loading, Switch, Color
+  Button, Checkbox, List, Modal, Select, Input, Loading, Switch, Color, HisOrderHover
 }
 
 export type { SelectDataSourceItem }

@@ -108,4 +108,41 @@
       width: 100%;
     }
   }
+  &-his-order-hover {
+    position: fixed;
+    top: 84px;
+    right: 16px;
+    width: 200px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--klinecharts-pro-his-order-hover-border);
+    background-color: var(--klinecharts-pro-his-order-hover-bg);
+    box-shadow: 0 8px 20px var(--klinecharts-pro-his-order-hover-shadow);
+    z-index: 10005;
+    pointer-events: none;
+    font-size: 12px;
+    color: var(--klinecharts-pro-his-order-hover-text);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    &.is-buy {
+      border-color: var(--klinecharts-pro-his-order-buy-color);
+    }
+    &.is-sell {
+      border-color: var(--klinecharts-pro-his-order-sell-color);
+    }
+    &-title {
+      font-weight: 700;
+      &.is-buy {
+        color: var(--klinecharts-pro-his-order-buy-color);
+      }
+      &.is-sell {
+        color: var(--klinecharts-pro-his-order-sell-color);
+      }
+    }
+    strong {
+      color: var(--klinecharts-pro-text-second-color);
+      font-weight: 600;
+    }
+  }
 }
