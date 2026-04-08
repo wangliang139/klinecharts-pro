@@ -7,9 +7,9 @@ import {
   type Chart,
   Coordinate,
   LineStyle,
-  type Point,
   OverlayEvent,
   OverlayTemplate,
+  type Point,
   TextStyle,
   utils,
 } from "klinecharts";
@@ -59,6 +59,24 @@ const lineStyle = (): LineStyle => ({
 });
 
 const labelStyle: TextStyle = {
+  style: "stroke",
+  size: 12,
+  family: "Arial, sans-serif",
+  weight: "normal",
+  color: LIQ_LINE,
+  backgroundColor: "transparent",
+  borderColor: LIQ_LINE,
+  borderStyle: "solid",
+  borderSize: 1,
+  borderDashedValue: [],
+  borderRadius: 2,
+  paddingLeft: 6,
+  paddingRight: 6,
+  paddingTop: 2,
+  paddingBottom: 2,
+};
+
+const yAxisLabelStyle: TextStyle = {
   style: "fill",
   size: 12,
   family: "Arial, sans-serif",
@@ -78,10 +96,12 @@ const labelStyle: TextStyle = {
 
 const liquidationLine = (): OverlayTemplate => ({
   name: "liquidationLine",
+  mode: "normal",
   totalStep: 1,
+  lock: true,
   needDefaultPointFigure: false,
   needDefaultXAxisFigure: false,
-  needDefaultYAxisFigure: true,
+  needDefaultYAxisFigure: false,
   createPointFigures: ({ chart, coordinates, bounding, overlay }) => {
     const liq = overlay.points[0]?.value;
     const last = chart.getDataList().at(-1);
@@ -96,11 +116,10 @@ const liquidationLine = (): OverlayTemplate => ({
 
     const symbol = chart.getSymbol();
     const pricePrecision = symbol?.pricePrecision ?? 2;
-    const cur = symbol?.priceCurrency;
-    const currency = typeof cur === "string" && cur ? `${cur.toUpperCase()} ` : "";
-    const label = `${currency}${utils.formatPrecision(liq, pricePrecision)}`;
+    const label = `${utils.formatPrecision(liq, pricePrecision)}`;
     const textWidth = utils.calcTextWidth(label) + labelStyle.paddingLeft! + labelStyle.paddingRight!;
-    const marginRight = 8;
+    const marginLeft = 16;
+    const lineStartX = marginLeft + textWidth;
 
     return [
       {
@@ -108,8 +127,8 @@ const liquidationLine = (): OverlayTemplate => ({
         type: "line",
         attrs: {
           coordinates: [
-            { x: 0, y },
-            { x: Math.max(0, bounding.width - textWidth - marginRight), y },
+            { x: Math.min(lineStartX, bounding.width), y },
+            { x: bounding.width, y },
           ],
         },
         styles: lineStyle(),
@@ -119,10 +138,10 @@ const liquidationLine = (): OverlayTemplate => ({
         key: "liq-label",
         type: "text",
         attrs: {
-          x: bounding.width - marginRight,
+          x: marginLeft,
           y,
-          text: label,
-          align: "right",
+          text: 'Liq: ' + label,
+          align: "left",
           baseline: "middle",
         },
         styles: labelStyle,
@@ -162,7 +181,7 @@ const liquidationLine = (): OverlayTemplate => ({
         align: isFromZero ? "left" : "right",
         baseline: "middle",
       },
-      styles: labelStyle,
+      styles: yAxisLabelStyle,
     };
   },
   onPressedMoveStart: () => false,
