@@ -14,6 +14,17 @@ if (!root) {
 }
 
 root.innerHTML = '<div id="chart" class="chart-wrap"></div>';
+const chartContainer = document.getElementById("chart");
+if (!chartContainer) {
+  throw new Error("#chart 容器不存在");
+}
+
+const lockPageScrollWhenInteractingChart = (event: Event) => {
+  event.preventDefault();
+  event.stopPropagation();
+};
+chartContainer.addEventListener("wheel", lockPageScrollWhenInteractingChart, { passive: false });
+chartContainer.addEventListener("touchmove", lockPageScrollWhenInteractingChart, { passive: false });
 
 const chart = new KLineChartPro({
   container: "chart",
