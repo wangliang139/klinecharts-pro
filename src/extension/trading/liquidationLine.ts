@@ -59,21 +59,21 @@ const lineStyle = (): LineStyle => ({
 });
 
 const labelStyle: TextStyle = {
-  style: "stroke",
+  style: "stroke_fill",
   size: 12,
   family: "Arial, sans-serif",
   weight: "normal",
   color: LIQ_LINE,
-  backgroundColor: "transparent",
+  backgroundColor: "white",
   borderColor: LIQ_LINE,
   borderStyle: "solid",
   borderSize: 1,
   borderDashedValue: [],
   borderRadius: 2,
-  paddingLeft: 6,
-  paddingRight: 6,
-  paddingTop: 2,
-  paddingBottom: 2,
+  paddingLeft: 4,
+  paddingRight: 4,
+  paddingTop: 4,
+  paddingBottom: 4,
 };
 
 const yAxisLabelStyle: TextStyle = {
@@ -87,11 +87,11 @@ const yAxisLabelStyle: TextStyle = {
   borderStyle: "solid",
   borderSize: 1,
   borderDashedValue: [],
-  borderRadius: 2,
-  paddingLeft: 6,
-  paddingRight: 6,
-  paddingTop: 2,
-  paddingBottom: 2,
+  borderRadius: 0,
+  paddingLeft: 4,
+  paddingRight: 4,
+  paddingTop: 4,
+  paddingBottom: 4,
 };
 
 const liquidationLine = (): OverlayTemplate => ({

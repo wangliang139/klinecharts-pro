@@ -38,18 +38,57 @@ const baseLabel = (color: string): TextStyle => ({
   borderSize: 0,
   borderDashedValue: [],
   borderRadius: 2,
-  paddingLeft: 6,
-  paddingRight: 6,
-  paddingTop: 2,
-  paddingBottom: 2,
+  paddingLeft: 4,
+  paddingRight: 4,
+  paddingTop: 4,
+  paddingBottom: 4,
+});
+
+const pnlLabel = (color: string): TextStyle => ({
+  style: "stroke_fill",
+  size: 12,
+  family: "Arial, sans-serif",
+  weight: "normal",
+  color: "white",
+  backgroundColor: color,
+  borderColor: color,
+  borderStyle: "solid",
+  borderSize: 1,
+  borderDashedValue: [],
+  borderRadius: [2, 0, 0, 2],
+  paddingLeft: 4,
+  paddingRight: 4,
+  paddingTop: 4,
+  paddingBottom: 4,
+});
+
+const qtyLabel = (color: string): TextStyle => ({
+  style: "stroke_fill",
+  size: 12,
+  family: "Arial, sans-serif",
+  weight: "normal",
+  color,
+  backgroundColor: "white",
+  borderColor: color,
+  borderStyle: "solid",
+  borderSize: 1,
+  borderDashedValue: [],
+  borderRadius: [0, 2, 2, 0],
+  paddingLeft: 4,
+  paddingRight: 4,
+  paddingTop: 4,
+  paddingBottom: 4,
 });
 
 const positionAvgLine = (): OverlayTemplate => ({
   name: "positionAvgLine",
   totalStep: 1,
+  mode: "normal",
+  lock: true,
+  zLevel: 1000,
   needDefaultPointFigure: false,
   needDefaultXAxisFigure: false,
-  needDefaultYAxisFigure: true,
+  needDefaultYAxisFigure: false,
   createPointFigures: ({ chart, coordinates, bounding, overlay }) => {
     const avgPrice = overlay.points[0]?.value;
     const ext = overlay.extendData as Extend | undefined;
@@ -62,29 +101,30 @@ const positionAvgLine = (): OverlayTemplate => ({
     const y = (chart.convertToPixel({ timestamp: ts, value: avgPrice }) as Partial<Coordinate>).y ?? coordinates[0].y;
     const mark = last.close;
     const mult = ext.multiplier ?? 1;
-    const pnlRaw =
-      ext.side === "long" ? (mark - avgPrice) * ext.size * mult : (avgPrice - mark) * ext.size * mult;
+    const pnlRaw = ext.side === "long" ? (mark - avgPrice) * ext.size * mult : (avgPrice - mark) * ext.size * mult;
 
     const symbol = chart.getSymbol();
     const pricePrecision = symbol?.pricePrecision ?? 2;
     const volumePrecision = symbol?.volumePrecision ?? 4;
-    const cur = symbol?.priceCurrency;
-    const currency = typeof cur === "string" && cur ? `${cur.toUpperCase()} ` : "";
 
     const qtyText = formatWesternGrouped(ext.size, volumePrecision);
-    const pnlText = `${pnlRaw >= 0 ? "+" : ""}${currency}${formatWesternGrouped(pnlRaw, pricePrecision)}`;
+    const pnlText = `PNL ${pnlRaw >= 0 ? "+" : ""}${formatWesternGrouped(pnlRaw, pricePrecision)}`;
 
     const sideColor = ext.side === "long" ? LONG_COLOR : SHORT_COLOR;
     const pnlColor = pnlRaw >= 0 ? PNL_POSITIVE : PNL_NEGATIVE;
 
-    const qtyStyle = baseLabel(sideColor);
-    const pnlStyle = baseLabel(pnlColor);
+    const qtyStyle = qtyLabel(sideColor);
+    const pnlStyle = pnlLabel(pnlColor);
 
-    const pnlMarginRight = 8;
-    const qtyMarginRight =
-      pnlMarginRight + utils.calcTextWidth(pnlText) + pnlStyle.paddingLeft! + pnlStyle.paddingRight!;
-    const lineMarginRight =
-      qtyMarginRight + utils.calcTextWidth(qtyText) + qtyStyle.paddingLeft! + qtyStyle.paddingRight!;
+    const padL = qtyStyle.paddingLeft!;
+    const padR = qtyStyle.paddingRight!;
+    const qtyBoxW = utils.calcTextWidth(qtyText) + padL + padR;
+    const pnlBoxW = utils.calcTextWidth(pnlText) + padL + padR;
+    const marginLeft = 16;
+    const gapBetweenLabels = -1;
+    const gapAfterLabels = 0;
+    const qtyX = marginLeft + pnlBoxW + gapBetweenLabels;
+    const lineStartX = qtyX + qtyBoxW + gapAfterLabels;
 
     return [
       {
@@ -92,37 +132,37 @@ const positionAvgLine = (): OverlayTemplate => ({
         type: "line",
         attrs: {
           coordinates: [
-            { x: 0, y },
-            { x: Math.max(0, bounding.width - lineMarginRight), y },
+            { x: Math.min(lineStartX, bounding.width), y },
+            { x: bounding.width, y },
           ],
         },
         styles: lineStyle(sideColor),
         ignoreEvent: true,
       },
       {
-        key: "qty",
-        type: "text",
-        attrs: {
-          x: bounding.width - qtyMarginRight,
-          y,
-          text: qtyText,
-          align: "right",
-          baseline: "middle",
-        },
-        styles: qtyStyle,
-        ignoreEvent: true,
-      },
-      {
         key: "pnl",
         type: "text",
         attrs: {
-          x: bounding.width - pnlMarginRight,
+          x: marginLeft,
           y,
           text: pnlText,
-          align: "right",
+          align: "left",
           baseline: "middle",
         },
         styles: pnlStyle,
+        ignoreEvent: true,
+      },
+      {
+        key: "qty",
+        type: "text",
+        attrs: {
+          x: qtyX,
+          y,
+          text: qtyText,
+          align: "left",
+          baseline: "middle",
+        },
+        styles: qtyStyle,
         ignoreEvent: true,
       },
     ];
@@ -140,8 +180,8 @@ const positionAvgLine = (): OverlayTemplate => ({
     const last = chart.getDataList().at(-1);
     const y =
       last && Number.isFinite(last.close)
-        ? (chart.convertToPixel({ timestamp: last.timestamp, value: avgPrice }) as Partial<Coordinate>).y ??
-          coordinates[0].y
+        ? ((chart.convertToPixel({ timestamp: last.timestamp, value: avgPrice }) as Partial<Coordinate>).y ??
+          coordinates[0].y)
         : coordinates[0].y;
     const isFromZero = yAxis?.isFromZero() ?? false;
     const text = formatWesternGrouped(avgPrice, precision.price);
