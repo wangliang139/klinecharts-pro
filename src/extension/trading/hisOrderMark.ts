@@ -13,6 +13,7 @@ const MARK_OFFSET = 14;
 const STACK_GAP = 14;
 
 const HIS_ORDER_HOVER_EVENT = "klinecharts-pro-his-order-hover";
+const overlayAnchorMap = new Map<string, { x: number; y: number }>();
 
 const markerTextStyle: TextStyle = {
   style: "fill",
@@ -63,6 +64,13 @@ const historicalOrderMark = (): OverlayTemplate => ({
     const y = ext.isBuy
       ? lowY + MARK_OFFSET + stackIndex * STACK_GAP
       : highY - MARK_OFFSET - stackIndex * STACK_GAP;
+    if (overlay.id) {
+      const paneDom = chart.getDom("candle_pane", "main");
+      if (paneDom) {
+        const rect = paneDom.getBoundingClientRect();
+        overlayAnchorMap.set(overlay.id, { x: rect.left + x, y: rect.top + y });
+      }
+    }
 
     const figures: any[] = [
       {
@@ -84,22 +92,27 @@ const historicalOrderMark = (): OverlayTemplate => ({
     return figures;
   },
   onMouseEnter: (event: OverlayEvent<unknown>) => {
-    console.log("onMouseEnter"); 
+    const anyEvt = event as any;
+    const mappedAnchor = event.overlay.id ? overlayAnchorMap.get(event.overlay.id) : undefined;
+    const pointerX = mappedAnchor?.x ?? anyEvt?.event?.clientX ?? anyEvt?.mouseEvent?.clientX ?? null;
+    const pointerY = mappedAnchor?.y ?? anyEvt?.event?.clientY ?? anyEvt?.mouseEvent?.clientY ?? null;
     const ext = event.overlay.extendData as (HisOrder & { stackIndex?: number }) | undefined;
     if (ext) {
       window.dispatchEvent(
         new CustomEvent(HIS_ORDER_HOVER_EVENT, {
-          detail: { visible: true, order: ext },
+          detail: { visible: true, order: ext, anchorX: pointerX, anchorY: pointerY },
         }),
       );
     }
     return false;
   },
   onMouseLeave: (event: OverlayEvent<unknown>) => {
-    console.log("onMouseLeave"); 
+    if (event.overlay.id) {
+      overlayAnchorMap.delete(event.overlay.id);
+    }
     window.dispatchEvent(
       new CustomEvent(HIS_ORDER_HOVER_EVENT, {
-        detail: { visible: false, order: null },
+        detail: { visible: false, order: null, anchorX: null, anchorY: null },
       }),
     );
     return false;

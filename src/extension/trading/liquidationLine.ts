@@ -31,8 +31,8 @@ const labelStyle: TextStyle = {
   borderRadius: 2,
   paddingLeft: 4,
   paddingRight: 4,
-  paddingTop: 4,
-  paddingBottom: 4,
+  paddingTop: 2,
+  paddingBottom: 2,
 };
 
 const yAxisLabelStyle: TextStyle = {
@@ -49,8 +49,8 @@ const yAxisLabelStyle: TextStyle = {
   borderRadius: 2,
   paddingLeft: 4,
   paddingRight: 4,
-  paddingTop: 4,
-  paddingBottom: 4,
+  paddingTop: 2,
+  paddingBottom: 2,
 };
 
 const liquidationLine = (): OverlayTemplate => ({

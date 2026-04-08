@@ -98,6 +98,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   const [symbolSearchModalVisible, setSymbolSearchModalVisible] = createSignal(false)
   const [hisOrderHoverVisible, setHisOrderHoverVisible] = createSignal(false)
   const [hisOrderHoverData, setHisOrderHoverData] = createSignal<HisOrder | null>(null)
+  const [hisOrderHoverAnchor, setHisOrderHoverAnchor] = createSignal<{ x: number | null; y: number | null }>({ x: null, y: null })
   let hisOrderHoverHideTimer: number | null = null
 
   const [indicatorSettingModalParams, setIndicatorSettingModalParams] = createSignal({
@@ -135,7 +136,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   }
 
   const onHisOrderHover = (evt: Event) => {
-    const event = evt as CustomEvent<{ visible: boolean; order: HisOrder | null }>
+    const event = evt as CustomEvent<{ visible: boolean; order: HisOrder | null; anchorX?: number | null; anchorY?: number | null }>
     const visible = !!event.detail?.visible
     if (visible) {
       if (hisOrderHoverHideTimer != null) {
@@ -143,6 +144,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
         hisOrderHoverHideTimer = null
       }
       setHisOrderHoverData(event.detail?.order ?? null)
+      setHisOrderHoverAnchor({ x: event.detail?.anchorX ?? null, y: event.detail?.anchorY ?? null })
       setHisOrderHoverVisible(true)
       return
     }
@@ -152,6 +154,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
     hisOrderHoverHideTimer = window.setTimeout(() => {
       setHisOrderHoverVisible(false)
       setHisOrderHoverData(null)
+      setHisOrderHoverAnchor({ x: null, y: null })
       hisOrderHoverHideTimer = null
     }, 120)
   }
@@ -599,6 +602,8 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
         <HisOrderHover
           order={hisOrderHoverData()!}
           formattedTime={formatTimeByTz(hisOrderHoverData()!.timestamp, props.locale, timezone().key)}
+          anchorX={hisOrderHoverAnchor().x}
+          anchorY={hisOrderHoverAnchor().y}
         />
       </Show>
       <PeriodBar
