@@ -26,6 +26,7 @@ export interface ModalProps extends ParentProps {
 }
 
 const Modal: ParentComponent<ModalProps> = (props) => {
+  let lastTouchY: number | null = null
 
   const handleClose = (event: MouseEvent) => {
     // @ts-expect-error
@@ -43,12 +44,63 @@ const Modal: ParentComponent<ModalProps> = (props) => {
     innerStyle['max-height'] = `${props.height}px`
   }
 
+  const canScrollWithinModal = (target: EventTarget | null, deltaY: number): boolean => {
+    if (!target || !(target instanceof Element) || deltaY === 0) {
+      return false
+    }
+    let current: Element | null = target
+    while (current) {
+      const style = window.getComputedStyle(current)
+      const isScrollableY =
+        (style.overflowY === 'auto' || style.overflowY === 'scroll' || style.overflowY === 'overlay') &&
+        current.scrollHeight > current.clientHeight
+      if (isScrollableY) {
+        if (deltaY > 0) {
+          return current.scrollTop + current.clientHeight < current.scrollHeight
+        }
+        return current.scrollTop > 0
+      }
+      current = current.parentElement
+    }
+    return false
+  }
+
+  const handleModalWheel = (event: WheelEvent) => {
+    event.stopPropagation()
+    if (!canScrollWithinModal(event.target, event.deltaY)) {
+      event.preventDefault()
+    }
+  }
+
+  const handleModalTouchStart = (event: TouchEvent) => {
+    if (event.touches.length > 0) {
+      lastTouchY = event.touches[0].clientY
+    }
+  }
+
+  const handleModalTouchMove = (event: TouchEvent) => {
+    event.stopPropagation()
+    if (event.touches.length === 0 || lastTouchY == null) {
+      event.preventDefault()
+      return
+    }
+    const currentY = event.touches[0].clientY
+    const deltaY = lastTouchY - currentY
+    lastTouchY = currentY
+    if (!canScrollWithinModal(event.target, deltaY)) {
+      event.preventDefault()
+    }
+  }
+
   return (
     <div
       class="klinecharts-pro-modal" onclick={handleClose}>
       <div
         class={`inner${props.height != null ? ' inner--fixed-height' : ''}`}
-        style={innerStyle}>
+        style={innerStyle}
+        onWheel={handleModalWheel}
+        onTouchStart={handleModalTouchStart}
+        onTouchMove={handleModalTouchMove}>
         <div
           class="title-container">
           {props.title}

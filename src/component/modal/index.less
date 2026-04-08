@@ -12,12 +12,14 @@
   top: 0;
   background-color: rgba(0, 0, 0, .2);
   z-index: 99;
+  overscroll-behavior: contain;
   .inner {
     background-color: var(--klinecharts-pro-popover-background-color);
     box-shadow: 0 6px 12px 0 rgba(0, 0, 0, .3);
     border-radius: 4px;
     width: 90%;
     box-sizing: border-box;
+    overscroll-behavior: contain;
     @media only screen and (min-width: 600px) {
       min-width: 300px;
       max-width: fit-content;
@@ -37,6 +39,7 @@
         flex: 1;
         min-height: 0;
         overflow: auto;
+        overscroll-behavior: contain;
         display: flex;
         flex-direction: column;
       }

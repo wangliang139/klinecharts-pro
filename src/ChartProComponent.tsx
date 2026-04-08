@@ -450,6 +450,25 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
     }
   })
 
+  createEffect(() => {
+    const chartContainer = widgetRef as HTMLDivElement | undefined
+    if (!chartContainer) return
+    if (!settingModalVisible()) return
+
+    const lockChartScroll = (event: Event) => {
+      event.preventDefault()
+      event.stopPropagation()
+    }
+
+    chartContainer.addEventListener('wheel', lockChartScroll, { passive: false })
+    chartContainer.addEventListener('touchmove', lockChartScroll, { passive: false })
+
+    onCleanup(() => {
+      chartContainer.removeEventListener('wheel', lockChartScroll)
+      chartContainer.removeEventListener('touchmove', lockChartScroll)
+    })
+  })
+
   return (
     <>
       <i class="icon-close klinecharts-pro-load-icon" />
