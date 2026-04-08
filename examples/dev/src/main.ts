@@ -49,7 +49,7 @@ const chart = new KLineChartPro({
     { span: 1, type: "day", text: "1d" },
   ],
   datafeed,
-  theme: "light",
+  theme: "dark",
   locale: "zh-CN",
   drawingBarVisible: false,
 });
@@ -78,6 +78,42 @@ setTimeout(() => {
     { side: "long", isBuy: true, price: close - 200, size: 10 },
     { side: "short", isBuy: false, price: close + 200, size: 10 },
     { side: "short", isBuy: false, size: 10 , orderType: "market"},
+  ]);
+  const rightBar = list.at(Math.max(0, list.length - 3));
+  chart.setHisOrders([
+    {
+      id: "his-buy-1",
+      orderId: "10001",
+      isBuy: true,
+      side: "long",
+      timestamp: Date.now(),
+      price: close - 120,
+      size: 4,
+      fee: 1.5,
+      pnl: 36.2,
+    },
+    {
+      id: "his-buy-2",
+      orderId: "10002",
+      isBuy: true,
+      side: "long",
+      timestamp: Date.now(),
+      price: close - 120,
+      size: 4,
+      fee: 1.5,
+      pnl: 36.2,
+    },
+    {
+      id: "his-sell-1",
+      orderId: "10002",
+      isBuy: false,
+      side: "short",
+      timestamp: rightBar?.timestamp ?? Date.now(),
+      price: close + 140,
+      size: 3,
+      fee: 1.2,
+      pnl: -12.8,
+    },
   ]);
 }, 1000);
 

@@ -124,5 +124,6 @@
   "trading_display_positions": "当前持仓",
   "trading_display_liquidation": "强平价格",
   "trading_display_open_orders": "当前委托",
+  "trading_display_his_orders": "历史委托",
   "restore_default": "重置"
 }

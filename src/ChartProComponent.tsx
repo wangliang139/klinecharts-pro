@@ -58,6 +58,7 @@ import {
 } from './store/chartStore'
 import {
   loadTradingConfigFromStorage,
+  setHisOrdersData,
   setLiquidationPriceData,
   setOpenOrdersData,
   setPositionsData,
@@ -120,6 +121,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
     setPositions: (list) => { setPositionsData(list) },
     setLiqPrice: (price) => { setLiquidationPriceData(price) },
     setOpenOrders: (list) => { setOpenOrdersData(list) },
+    setHisOrders: (list) => { setHisOrdersData(list) },
   })
 
   const documentResize = () => {

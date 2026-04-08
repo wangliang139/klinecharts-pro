@@ -95,6 +95,7 @@ export interface TradingConfig {
   showPositions: boolean;
   showLiquidation: boolean;
   showOpenOrders: boolean;
+  showHisOrders: boolean;
 }
 
 export interface PendingOrder {
@@ -104,6 +105,19 @@ export interface PendingOrder {
   price?: number;
   size: number;
   orderType?: "limit" | "market";
+}
+
+export interface HisOrder {
+  id?: string;
+  orderId?: string | number;
+  symbol?: string;
+  side?: PositionSide;
+  isBuy: boolean;
+  timestamp: number;
+  price: number;
+  size: number;
+  fee?: number;
+  pnl?: number;
 }
 
 export type PositionSide = "long" | "short";
@@ -173,4 +187,5 @@ export interface ChartPro {
   setPositions(positions: Position[]): void;
   setLiqPrice(price: number | null): void;
   setOpenOrders(orders: PendingOrder[]): void;
+  setHisOrders(orders: HisOrder[]): void;
 }

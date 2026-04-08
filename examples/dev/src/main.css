@@ -13,7 +13,7 @@ body {
 .chart-wrap {
   width: 100%;
   height: min(720px, calc(100vh - 24px));
-  min-height: 800px;
+  min-height: 300px;
   overscroll-behavior: contain;
   touch-action: none;
 }

@@ -23,6 +23,7 @@ import { instanceApi, PaneProperties } from './store/chartStore'
 import {
   ChartPro,
   ChartProOptions,
+  HisOrder,
   PendingOrder,
   Period,
   Position,
@@ -171,5 +172,9 @@ export default class KLineChartPro implements ChartPro {
 
   setOpenOrders(orders: PendingOrder[]): void {
     this._chartApi?.setOpenOrders(orders)
+  }
+
+  setHisOrders(orders: HisOrder[]): void {
+    this._chartApi?.setHisOrders(orders)
   }
 }

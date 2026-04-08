@@ -124,5 +124,6 @@
   "trading_display_positions": "Open positions",
   "trading_display_liquidation": "Liquidation price",
   "trading_display_open_orders": "Open orders",
+  "trading_display_his_orders": "Historical orders",
   "restore_default": "Restore Defaults"
 }

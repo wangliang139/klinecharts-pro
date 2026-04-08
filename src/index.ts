@@ -28,6 +28,7 @@ import {
   ChartProOptions,
   Datafeed,
   DatafeedSubscribeCallback,
+  HisOrder,
   PendingOrder,
   Period,
   Position,
@@ -50,5 +51,5 @@ export {
   load as loadLocales
 }
 
-export type { ChartObjType, ChartPro, ChartProOptions, Datafeed, DatafeedSubscribeCallback, PendingOrder, Period, Position, PositionSide, ProChart, SymbolInfo, TradingConfig }
+export type { ChartObjType, ChartPro, ChartProOptions, Datafeed, DatafeedSubscribeCallback, HisOrder, PendingOrder, Period, Position, PositionSide, ProChart, SymbolInfo, TradingConfig }
 
