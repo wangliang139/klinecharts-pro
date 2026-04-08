@@ -91,7 +91,7 @@ const WarningAddModal: Component<WarningAddModalProps> = (props) => {
   return (
     <Modal
       title="添加预警"
-      width={460}
+      width={360}
       buttons={[
         { children: '取消', type: 'cancel', onClick: props.onClose },
         { children: submitting() ? '提交中...' : '提交', onClick: submit },

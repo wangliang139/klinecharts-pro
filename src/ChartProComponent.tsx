@@ -45,6 +45,7 @@ import {
   SymbolSearchModal,
   TimezoneModal
 } from './widget'
+import WarningModal from './widget/warning-modal'
 
 import { translateTimezone } from './widget/timezone-modal/data'
 
@@ -204,7 +205,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   const [timezone, setTimezone] = createSignal<SelectDataSourceItem>({ key: props.timezone, text: translateTimezone(props.timezone, props.locale) })
 
   const [settingModalVisible, setSettingModalVisible] = createSignal(false)
-  const [settingInitialTab, setSettingInitialTab] = createSignal<'trading' | 'warning'>('trading')
+  const [warningModalVisible, setWarningModalVisible] = createSignal(false)
   const [widgetDefaultStyles, setWidgetDefaultStyles] = createSignal<Styles>()
 
   const [screenshotUrl, setScreenshotUrl] = createSignal('')
@@ -581,7 +582,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   createEffect(() => {
     const chartContainer = widgetRef as HTMLDivElement | undefined
     if (!chartContainer) return
-    if (!settingModalVisible()) return
+    if (!settingModalVisible() && !warningModalVisible()) return
 
     const lockChartScroll = (event: Event) => {
       event.preventDefault()
@@ -624,15 +625,19 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
           onConfirm={setTimezone}
         />
       </Show>
+      <Show when={warningModalVisible()}>
+        <WarningModal
+          warnings={warnings()}
+          onClose={() => { setWarningModalVisible(false) }}
+          onAddWarning={props.onAddWarning}
+          onRemoveWarning={handleRemoveWarning}
+        />
+      </Show>
       <Show when={settingModalVisible()}>
         <SettingModal
           locale={props.locale}
           currentStyles={utils.clone(instanceApi()!.getStyles())}
-          warnings={warnings()}
-          initialSettingKey={settingInitialTab()}
           onClose={() => { setSettingModalVisible(false) }}
-          onAddWarning={props.onAddWarning}
-          onRemoveWarning={handleRemoveWarning}
           onChange={style => {
             instanceApi()?.setStyles(style)
           }}
@@ -685,14 +690,8 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
         onPeriodChange={setPeriod}
         onIndicatorClick={() => { setIndicatorModalVisible((visible => !visible)) }}
         onTimezoneClick={() => { setTimezoneModalVisible((visible => !visible)) }}
-        onWarningClick={() => {
-          setSettingInitialTab('warning')
-          setSettingModalVisible(true)
-        }}
-        onSettingClick={() => {
-          setSettingInitialTab('trading')
-          setSettingModalVisible((visible => !visible))
-        }}
+        onWarningClick={() => { setWarningModalVisible(true) }}
+        onSettingClick={() => { setSettingModalVisible((visible => !visible)) }}
         onScreenshotClick={() => {
           if (instanceApi()) {
             const url = instanceApi()!.getConvertPictureUrl(true, 'jpeg', props.theme === 'dark' ? '#151517' : '#ffffff')

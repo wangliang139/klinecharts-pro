@@ -91,7 +91,7 @@ const priceWarningLine = (): OverlayTemplate => ({
     /** 等腰三角：底边在左，顶点贴齐主图画布右缘 */
     const triangleTipX = bounding.width;
     const triangleBaseX = triangleTipX - 10;
-    const lineEndX = triangleBaseX - 6;
+    const lineEndX = triangleBaseX - 2;
     const figures: any[] = [
       {
         key: "warning-line",
@@ -165,7 +165,7 @@ const priceWarningLine = (): OverlayTemplate => ({
           },
           styles: {
             style: "fill",
-            size: 16,
+            size: 18,
             family: "Arial, sans-serif",
             color: "#fff",
             backgroundColor: "transparent",
