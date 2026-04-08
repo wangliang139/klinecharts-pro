@@ -48,7 +48,13 @@ export default class Chart implements ProChart {
     return Array.from(this._charts.values());
   }
 
-  constructor(ds: string | HTMLElement, options?: Options | undefined) {
+  constructor(ds: string | HTMLElement | undefined | null, options?: Options | undefined) {
+    if (ds === undefined || ds === null) {
+      throw new Error("Chart container is required");
+    }
+    if (typeof ds !== "string" && !(ds instanceof HTMLElement)) {
+      throw new Error("Invalid chart container");
+    }
     const chart = init(ds, options);
 
     if (!chart) {
@@ -58,7 +64,7 @@ export default class Chart implements ProChart {
     this.id = chart.id;
   }
 
-  static init(ds: string | HTMLElement, options?: Options | undefined): Chart {
+  static init(ds: string | HTMLElement | undefined | null, options?: Options | undefined): Chart {
     return new Chart(ds, options);
   }
 
