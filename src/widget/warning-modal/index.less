@@ -1,0 +1,59 @@
+@import (reference) '../../base.less';
+
+.@{prefix-cls}-warning-modal {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 20px;
+  min-height: 0;
+  width: 100%;
+  box-sizing: border-box;
+
+  .warning-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+
+  .warning-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--klinecharts-pro-border-color);
+    border-radius: 4px;
+  }
+
+  .warning-text {
+    color: var(--klinecharts-pro-text-color);
+    font-size: 13px;
+  }
+
+  .warning-delete {
+    border: none;
+    background: transparent;
+    color: #f6465d;
+    cursor: pointer;
+    font-size: 12px;
+  }
+
+  .warning-empty {
+    color: var(--klinecharts-pro-text-second-color);
+    font-size: 12px;
+  }
+
+  .warning-add-btn {
+    margin-top: auto;
+    height: 32px;
+    border: none;
+    border-radius: 4px;
+    background-color: var(--klinecharts-pro-primary-color);
+    color: #fff;
+    cursor: pointer;
+  }
+}
