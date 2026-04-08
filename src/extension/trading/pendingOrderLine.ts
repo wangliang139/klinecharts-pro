@@ -87,7 +87,6 @@ const pendingOrderLine = (): OverlayTemplate => ({
   mode: "normal",
   totalStep: 1,
   lock: true,
-  zLevel: 1000,
   needDefaultPointFigure: false,
   needDefaultXAxisFigure: false,
   needDefaultYAxisFigure: false,

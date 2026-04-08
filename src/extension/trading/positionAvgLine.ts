@@ -26,16 +26,17 @@ const lineStyle = (color: string): LineStyle => ({
   dashedValue: [],
 });
 
-const baseLabel = (color: string): TextStyle => ({
-  style: "fill",
+/** 与 positionAvgLine Y 轴价签一致的底栏样式 */
+const axisPriceBox = (color: string): TextStyle => ({
+  style: "stroke_fill",
   size: 12,
   family: "Arial, sans-serif",
   weight: "normal",
-  color,
-  backgroundColor: "rgba(22, 26, 32, 0.72)",
-  borderColor: "transparent",
+  color: color,
+  backgroundColor: "rgba(255,255,255,0.75)",
+  borderColor: color,
   borderStyle: "solid",
-  borderSize: 0,
+  borderSize: 1,
   borderDashedValue: [],
   borderRadius: 2,
   paddingLeft: 4,
@@ -85,7 +86,6 @@ const positionAvgLine = (): OverlayTemplate => ({
   totalStep: 1,
   mode: "normal",
   lock: true,
-  zLevel: 1000,
   needDefaultPointFigure: false,
   needDefaultXAxisFigure: false,
   needDefaultYAxisFigure: false,
@@ -169,14 +169,16 @@ const positionAvgLine = (): OverlayTemplate => ({
   },
   createYAxisFigures: ({ chart, overlay, coordinates, bounding, yAxis }) => {
     const avgPrice = overlay.points[0]?.value;
+    const ext = overlay.extendData as Extend | undefined;
     const precision = getPrecision(chart, overlay, yAxis);
-    if (avgPrice === undefined) {
+    if (avgPrice === undefined|| !ext) {
       return {
         type: "text",
         attrs: { x: 0, y: coordinates[0].y, text: "", align: "right", baseline: "middle" },
-        styles: baseLabel("#888"),
+        styles: axisPriceBox("#888"),
       };
     }
+    const lineColor = ext.side === "long" ? LONG_COLOR : SHORT_COLOR;
     const last = chart.getDataList().at(-1);
     const y =
       last && Number.isFinite(last.close)
@@ -194,7 +196,7 @@ const positionAvgLine = (): OverlayTemplate => ({
         align: isFromZero ? "left" : "right",
         baseline: "middle",
       },
-      styles: baseLabel("#b7bdc6"),
+      styles: axisPriceBox(lineColor),
     };
   },
   onPressedMoveStart: () => false,

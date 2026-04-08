@@ -52,6 +52,7 @@ chart.setStyles({
 });
 
 setTimeout(() => {
+  console.log("style:", chart.getInstanceApi()?.getStyles());
   const api = chart.getInstanceApi();
   const list = api?.getDataList() ?? [];
   const last = list.at(-1);
