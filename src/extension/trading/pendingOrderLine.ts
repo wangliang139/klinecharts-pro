@@ -4,7 +4,7 @@
 
 import { Coordinate, LineStyle, OverlayEvent, OverlayTemplate, TextStyle, utils } from "klinecharts";
 
-import { formatWesternGrouped } from "../../helpers";
+import { formatWesternGrouped, getPrecision } from "../../helpers";
 import { isPriceInVisibleCandleRange } from "./chartVisibleRange";
 
 const LONG_SIDE_COLOR = "#2ebd85";
@@ -45,11 +45,31 @@ const labelStyleFor = (color: string): TextStyle => ({
   paddingBottom: 4,
 });
 
+/** 与 positionAvgLine Y 轴价签一致的底栏样式 */
+const axisPriceBox = (textColor: string): TextStyle => ({
+  style: "fill",
+  size: 12,
+  family: "Arial, sans-serif",
+  weight: "normal",
+  color: textColor,
+  backgroundColor: "rgba(22, 26, 32, 0.72)",
+  borderColor: "transparent",
+  borderStyle: "solid",
+  borderSize: 0,
+  borderDashedValue: [],
+  borderRadius: 2,
+  paddingLeft: 4,
+  paddingRight: 4,
+  paddingTop: 4,
+  paddingBottom: 4,
+});
+
 const pendingOrderLine = (): OverlayTemplate => ({
   name: "pendingOrderLine",
   mode: "normal",
   totalStep: 1,
   lock: true,
+  zLevel: 1000,
   needDefaultPointFigure: false,
   needDefaultXAxisFigure: false,
   needDefaultYAxisFigure: false,
@@ -112,6 +132,45 @@ const pendingOrderLine = (): OverlayTemplate => ({
         ignoreEvent: true,
       },
     ];
+  },
+  createYAxisFigures: ({ chart, overlay, coordinates, bounding, yAxis }) => {
+    const price = overlay.points[0]?.value;
+    const precision = getPrecision(chart, overlay, yAxis);
+    const emptyAxis = {
+      type: "text" as const,
+      attrs: { x: 0, y: coordinates[0].y, text: "", align: "right" as const, baseline: "middle" as const },
+      styles: axisPriceBox("#888"),
+    };
+    if (price === undefined || !Number.isFinite(price)) {
+      return emptyAxis;
+    }
+    const ext = overlay.extendData as Extend | undefined;
+    if (!ext) {
+      return emptyAxis;
+    }
+    if (!isPriceInVisibleCandleRange(chart, price)) {
+      return emptyAxis;
+    }
+    const last = chart.getDataList().at(-1);
+    if (!last) {
+      return emptyAxis;
+    }
+    const y =
+      (chart.convertToPixel({ timestamp: last.timestamp, value: price }) as Partial<Coordinate>).y ??
+      coordinates[0].y;
+    const isFromZero = yAxis?.isFromZero() ?? false;
+    const text = formatWesternGrouped(price, precision.price);
+    return {
+      type: "text",
+      attrs: {
+        x: isFromZero ? 0 : bounding.width,
+        y,
+        text,
+        align: isFromZero ? "left" : "right",
+        baseline: "middle",
+      },
+      styles: axisPriceBox("#b7bdc6"),
+    };
   },
   onPressedMoveStart: () => false,
   onPressedMoving: () => false,
