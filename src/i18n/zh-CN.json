@@ -123,5 +123,6 @@
   "setting_sidebar_trading": "交易",
   "trading_display_positions": "当前持仓",
   "trading_display_liquidation": "强平价格",
+  "trading_display_open_orders": "当前委托",
   "restore_default": "重置"
 }

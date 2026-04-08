@@ -3,51 +3,10 @@
  * you may not use this file except in compliance with the License.
  */
 
-import {
-  type Chart,
-  Coordinate,
-  LineStyle,
-  OverlayEvent,
-  OverlayTemplate,
-  type Point,
-  TextStyle,
-  utils,
-} from "klinecharts";
+import { Coordinate, LineStyle, OverlayEvent, OverlayTemplate, TextStyle, utils } from "klinecharts";
 
 import { formatWesternGrouped, getPrecision } from "../../helpers";
-
-function pickValueFromConvertResult(
-  r: Partial<Point> | Array<Partial<Point>> | undefined,
-): number | undefined {
-  if (r == null) return undefined;
-  const p = Array.isArray(r) ? r[0] : r;
-  const v = p?.value;
-  return typeof v === "number" && Number.isFinite(v) ? v : undefined;
-}
-
-/** 主图蜡烛区当前可见的价格区间（含边界），与 Y 轴刻度一致 */
-function getCandlePaneVisibleValueRange(chart: Chart): { min: number; max: number } | null {
-  const size = chart.getSize("candle_pane", "main");
-  if (!size || size.width <= 0 || size.height <= 0) return null;
-  const x = size.width * 0.5;
-  const topVal = pickValueFromConvertResult(
-    chart.convertFromPixel([{ x, y: 0 }], { paneId: "candle_pane" }),
-  );
-  const bottomVal = pickValueFromConvertResult(
-    chart.convertFromPixel([{ x, y: size.height }], { paneId: "candle_pane" }),
-  );
-  if (topVal === undefined || bottomVal === undefined) return null;
-  return {
-    min: Math.min(topVal, bottomVal),
-    max: Math.max(topVal, bottomVal),
-  };
-}
-
-function isLiquidationInVisibleYRange(chart: Chart, liq: number): boolean {
-  const range = getCandlePaneVisibleValueRange(chart);
-  if (!range) return false;
-  return liq >= range.min && liq <= range.max;
-}
+import { isPriceInVisibleCandleRange } from "./chartVisibleRange";
 
 const LIQ_LINE = "#f6465d";
 
@@ -108,7 +67,7 @@ const liquidationLine = (): OverlayTemplate => ({
     if (liq === undefined || !Number.isFinite(liq) || !last) {
       return [];
     }
-    if (!isLiquidationInVisibleYRange(chart, liq)) {
+    if (!isPriceInVisibleCandleRange(chart, liq)) {
       return [];
     }
     const ts = last.timestamp;
@@ -165,7 +124,7 @@ const liquidationLine = (): OverlayTemplate => ({
     if (liq === undefined || !Number.isFinite(liq)) {
       return emptyAxis;
     }
-    if (!isLiquidationInVisibleYRange(chart, liq)) {
+    if (!isPriceInVisibleCandleRange(chart, liq)) {
       return emptyAxis;
     }
     const last = chart.getDataList().at(-1);

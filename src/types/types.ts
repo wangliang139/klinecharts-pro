@@ -167,16 +167,25 @@ export type OrderStylesType = {
 export interface TradingConfig {
   showPositions: boolean;
   showLiquidation: boolean;
+  showOpenOrders: boolean;
 }
 
-export type TradingPositionSide = "long" | "short";
-
-export interface TradingPosition {
+export interface PendingOrder {
   id?: string;
-  side: TradingPositionSide;
+  side: PositionSide;
+  isBuy: boolean;
+  price?: number;
+  size: number;
+  orderType?: "limit" | "market";
+}
+
+export type PositionSide = "long" | "short";
+
+export interface Position {
+  id?: string;
+  side: PositionSide;
   avgPrice: number;
   size: number;
-  /** 合约乘数，默认 1 */
   multiplier?: number;
 }
 
@@ -253,7 +262,7 @@ export interface ChartPro {
   getInstanceApi(): Nullable<Chart>;
   resize(): void;
   dispose(): void;
-  setPositions(positions: TradingPosition[]): void;
-  /** 设置唯一强平价格；传 `null` 清除 */
+  setPositions(positions: Position[]): void;
   setLiqPrice(price: number | null): void;
+  setOpenOrders(orders: PendingOrder[]): void;
 }

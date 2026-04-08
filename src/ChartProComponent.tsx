@@ -59,6 +59,7 @@ import {
 import {
   loadTradingConfigFromStorage,
   setLiquidationPriceData,
+  setOpenOrdersData,
   setPositionsData,
   syncTradingOverlays
 } from './store/tradingStore'
@@ -118,6 +119,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
     dispose: () => { },
     setPositions: (list) => { setPositionsData(list) },
     setLiqPrice: (price) => { setLiquidationPriceData(price) },
+    setOpenOrders: (list) => { setOpenOrdersData(list) },
   })
 
   const documentResize = () => {

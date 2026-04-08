@@ -216,6 +216,17 @@ const SettingModal: Component<SettingModalProps> = props => {
                   }}
                 />
               </div>
+              <div class="component">
+                <span>{i18n('trading_display_open_orders', props.locale)}</span>
+                <Switch
+                  open={tradingUi().showOpenOrders}
+                  onChange={() => {
+                    const next = { ...tradingUi(), showOpenOrders: !tradingUi().showOpenOrders }
+                    setTradingUi(next)
+                    setTradingConfigState(next)
+                  }}
+                />
+              </div>
             </Show>
           </div>
       </div> 

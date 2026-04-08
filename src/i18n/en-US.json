@@ -123,5 +123,6 @@
   "setting_sidebar_trading": "Trading",
   "trading_display_positions": "Open positions",
   "trading_display_liquidation": "Liquidation price",
+  "trading_display_open_orders": "Open orders",
   "restore_default": "Restore Defaults"
 }

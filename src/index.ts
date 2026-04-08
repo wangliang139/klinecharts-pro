@@ -37,12 +37,13 @@ import {
   OrderPlacedCallback,
   OrderResource,
   OrderType,
+  PendingOrder,
   Period,
+  Position,
+  PositionSide,
   ProChart,
   SymbolInfo,
-  TradingConfig,
-  TradingPosition,
-  TradingPositionSide
+  TradingConfig
 } from './types/types'
 
 import './index.less'
@@ -59,4 +60,4 @@ export {
   load as loadLocales
 }
 
-export type { ChartObjType, ChartPro, ChartProOptions, Datafeed, DatafeedSubscribeCallback, ExitType, OrderInfo, OrderModalType, OrderModifyInfo, OrderPlacedCallback, OrderResource, OrderType, Period, ProChart, SymbolInfo, TradingConfig, TradingPosition, TradingPositionSide }
+export type { ChartObjType, ChartPro, ChartProOptions, Datafeed, DatafeedSubscribeCallback, ExitType, OrderInfo, OrderModalType, OrderModifyInfo, OrderPlacedCallback, OrderResource, OrderType, PendingOrder, Period, ProChart, SymbolInfo, TradingConfig, Position as TradingPosition, PositionSide as TradingPositionSide }

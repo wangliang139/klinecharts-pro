@@ -6,7 +6,7 @@
 import { Coordinate, LineStyle, OverlayEvent, OverlayTemplate, TextStyle, utils } from "klinecharts";
 
 import { formatWesternGrouped, getPrecision } from "../../helpers";
-import type { TradingPositionSide } from "../../types/types";
+import type { PositionSide } from "../../types/types";
 
 const LONG_COLOR = "#2ebd85";
 const SHORT_COLOR = "#f6465d";
@@ -14,7 +14,7 @@ const PNL_POSITIVE = "#2ebd85";
 const PNL_NEGATIVE = "#f6465d";
 
 type Extend = {
-  side: TradingPositionSide;
+  side: PositionSide;
   size: number;
   multiplier?: number;
 };

@@ -21,6 +21,7 @@ import positionLine from './position/orderLine'
 import brush from './brush'
 import positionAvgLine from './trading/positionAvgLine'
 import liquidationLine from './trading/liquidationLine'
+import pendingOrderLine from './trading/pendingOrderLine'
 
 const overlays = [
   arrow(), brush(),
@@ -31,6 +32,7 @@ const overlays = [
   positionLine(),
   positionAvgLine(),
   liquidationLine(),
+  pendingOrderLine(),
 ]
 
 export default overlays

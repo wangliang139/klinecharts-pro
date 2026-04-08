@@ -20,7 +20,15 @@ import ChartProComponent from './ChartProComponent'
 
 import ChartDataLoader from './DataLoader'
 import { instanceApi, PaneProperties } from './store/chartStore'
-import { ChartPro, ChartProOptions, Period, ProChart, SymbolInfo, TradingPosition } from './types/types'
+import {
+  ChartPro,
+  ChartProOptions,
+  PendingOrder,
+  Period,
+  Position,
+  ProChart,
+  SymbolInfo,
+} from './types/types'
 
 const Logo = (
   <svg class="logo" viewBox="0 0 80 92">
@@ -154,11 +162,15 @@ export default class KLineChartPro implements ChartPro {
     this.destroy()
   }
 
-  setPositions(positions: TradingPosition[]): void {
+  setPositions(positions: Position[]): void {
     this._chartApi?.setPositions(positions)
   }
 
   setLiqPrice(price: number | null): void {
     this._chartApi?.setLiqPrice(price)
+  }
+
+  setOpenOrders(orders: PendingOrder[]): void {
+    this._chartApi?.setOpenOrders(orders)
   }
 }

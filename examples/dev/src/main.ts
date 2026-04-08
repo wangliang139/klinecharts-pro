@@ -61,6 +61,11 @@ setTimeout(() => {
     { side: "short", avgPrice: close+100, size: 10 },
   ]);
   chart.setLiqPrice(70000);
+  chart.setOpenOrders([
+    { side: "long", isBuy: true, price: close - 200, size: 10 },
+    { side: "short", isBuy: false, price: close + 200, size: 10 },
+    { side: "short", isBuy: false, size: 10 , orderType: "market"},
+  ]);
 }, 1500);
 
 window.addEventListener("resize", () => {
