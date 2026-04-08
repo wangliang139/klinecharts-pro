@@ -65,12 +65,118 @@ import {
   setPositionsData,
   syncTradingOverlays
 } from './store/tradingStore'
-import { HisOrder, Period, SymbolInfo } from './types/types'
+import { HisOrder, PendingOrder, Period, Position, SymbolInfo } from './types/types'
 const { createIndicator, pushOverlay, restoreChartState } = useChartState()
 
 interface PrevSymbolPeriod {
   symbol: SymbolInfo
   period: Period
+}
+
+const TRADING_RESYNC_DELAYS = [0, 120, 360, 900] as const
+const HIS_ORDER_HOVER_HIDE_DELAY = 120
+
+function buildTooltipFeatureStyles (color: string) {
+  return {
+    indicator: {
+      tooltip: {
+        features: [
+          {
+            id: 'visible',
+            position: 'middle' as const,
+            marginLeft: 6,
+            marginTop: 3,
+            marginRight: 0,
+            marginBottom: 0,
+            paddingLeft: 0,
+            paddingTop: 0,
+            paddingRight: 0,
+            paddingBottom: 0,
+            type: 'icon_font' as const,
+            content: {
+              code: '\ue903',
+              family: 'icomoon',
+            },
+            size: 14,
+            color: color,
+            activeColor: color,
+            backgroundColor: 'transparent',
+            borderRadius: 2,
+            activeBackgroundColor: 'rgba(22, 119, 255, 0.15)'
+          },
+          {
+            id: 'invisible',
+            position: 'middle' as const,
+            marginLeft: 6,
+            marginTop: 3,
+            marginRight: 0,
+            marginBottom: 0,
+            paddingLeft: 0,
+            paddingTop: 0,
+            paddingRight: 0,
+            paddingBottom: 0,
+            type: 'icon_font' as const,
+            content: {
+              code: '\ue901',
+              family: 'icomoon',
+            },
+            size: 14,
+            color: color,
+            activeColor: color,
+            backgroundColor: 'transparent',
+            borderRadius: 2,
+            activeBackgroundColor: 'rgba(22, 119, 255, 0.15)'
+          },
+          {
+            id: 'setting',
+            position: 'middle' as const,
+            marginLeft: 6,
+            marginTop: 3,
+            marginBottom: 0,
+            marginRight: 0,
+            paddingLeft: 0,
+            paddingTop: 0,
+            paddingRight: 0,
+            paddingBottom: 0,
+            type: 'icon_font' as const,
+            content: {
+              code: '\ue902',
+              family: 'icomoon',
+            },
+            size: 14,
+            color: color,
+            activeColor: color,
+            backgroundColor: 'transparent',
+            borderRadius: 2,
+            activeBackgroundColor: 'rgba(22, 119, 255, 0.15)'
+          },
+          {
+            id: 'close',
+            position: 'middle' as const,
+            marginLeft: 6,
+            marginTop: 3,
+            marginRight: 0,
+            marginBottom: 0,
+            paddingLeft: 0,
+            paddingTop: 0,
+            paddingRight: 0,
+            paddingBottom: 0,
+            type: 'icon_font' as const,
+            content: {
+              code: '\ue900',
+              family: 'icomoon',
+            },
+            size: 14,
+            color: color,
+            activeColor: color,
+            backgroundColor: 'transparent',
+            borderRadius: 2,
+            activeBackgroundColor: 'rgba(22, 119, 255, 0.15)'
+          }
+        ]
+      }
+    }
+  }
 }
 
 const ChartProComponent: Component<ChartProComponentProps> = props => {
@@ -101,6 +207,12 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   const [hisOrderHoverAnchor, setHisOrderHoverAnchor] = createSignal<{ x: number | null; y: number | null }>({ x: null, y: null })
   let hisOrderHoverHideTimer: number | null = null
   const tradingOverlayResyncTimers: number[] = []
+  let tradingOverlayResyncBatch = 0
+  let resizeRafId: number | null = null
+  let isDisposed = false
+  let lastTooltipFeatureColor: string | null = null
+  let widgetDefaultStylesCaptured = false
+  let lastExternalStyles: ReturnType<typeof styles>
 
   const [indicatorSettingModalParams, setIndicatorSettingModalParams] = createSignal({
     visible: false, indicatorName: '', paneId: '', calcParams: [] as Array<any>
@@ -110,7 +222,33 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   setPeriod(props.period)
   setSymbol(props.symbol)
 
-  props.ref({
+  const clearTradingOverlayResyncTimers = () => {
+    while (tradingOverlayResyncTimers.length > 0) {
+      const timer = tradingOverlayResyncTimers.pop()
+      if (timer != null) window.clearTimeout(timer)
+    }
+  }
+
+  const disposeChart = () => {
+    if (isDisposed) return
+    isDisposed = true
+    if (hisOrderHoverHideTimer != null) {
+      window.clearTimeout(hisOrderHoverHideTimer)
+      hisOrderHoverHideTimer = null
+    }
+    clearTradingOverlayResyncTimers()
+    if (resizeRafId != null) {
+      window.cancelAnimationFrame(resizeRafId)
+      resizeRafId = null
+    }
+    window.removeEventListener('klinecharts-pro-his-order-hover', onHisOrderHover as EventListener)
+    window.removeEventListener('resize', documentResize)
+    if (widgetRef) {
+      dispose(widgetRef)
+    }
+  }
+
+  const exposedApi = {
     setTheme,
     getTheme: () => theme(),
     setStyles,
@@ -125,15 +263,21 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
     getPeriod: () => period()!,
     getInstanceApi: () => instanceApi(),
     resize: () => instanceApi()?.resize(),
-    dispose: () => { },
-    setPositions: (list) => { setPositionsData(list) },
-    setLiqPrice: (price) => { setLiquidationPriceData(price) },
-    setOpenOrders: (list) => { setOpenOrdersData(list) },
-    setHisOrders: (list) => { setHisOrdersData(list) },
-  })
+    dispose: () => { disposeChart() },
+    setPositions: (list: Position[]) => { setPositionsData(list) },
+    setLiqPrice: (price: number | null) => { setLiquidationPriceData(price) },
+    setOpenOrders: (list: PendingOrder[]) => { setOpenOrdersData(list) },
+    setHisOrders: (list: HisOrder[]) => { setHisOrdersData(list) },
+  }
+
+  props.ref(exposedApi)
 
   const documentResize = () => {
-    instanceApi()?.resize()
+    if (resizeRafId != null) return
+    resizeRafId = window.requestAnimationFrame(() => {
+      resizeRafId = null
+      instanceApi()?.resize()
+    })
   }
 
   const onHisOrderHover = (evt: Event) => {
@@ -157,13 +301,19 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
       setHisOrderHoverData(null)
       setHisOrderHoverAnchor({ x: null, y: null })
       hisOrderHoverHideTimer = null
-    }, 120)
+    }, HIS_ORDER_HOVER_HIDE_DELAY)
   }
 
   const scheduleTradingOverlayResync = () => {
     // 周期/品种切换后数据加载是异步的，分段重试可覆盖“先清空后到数”的窗口。
-    ;[0, 120, 360, 900].forEach((delay) => {
+    tradingOverlayResyncBatch += 1
+    const currentBatch = tradingOverlayResyncBatch
+    clearTradingOverlayResyncTimers()
+    TRADING_RESYNC_DELAYS.forEach((delay) => {
       const timer = window.setTimeout(() => {
+        if (currentBatch !== tradingOverlayResyncBatch) {
+          return
+        }
         syncTradingOverlays()
         const idx = tradingOverlayResyncTimers.indexOf(timer)
         if (idx >= 0) tradingOverlayResyncTimers.splice(idx, 1)
@@ -323,17 +473,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   })
 
   onCleanup(() => {
-    if (hisOrderHoverHideTimer != null) {
-      window.clearTimeout(hisOrderHoverHideTimer)
-      hisOrderHoverHideTimer = null
-    }
-    while (tradingOverlayResyncTimers.length > 0) {
-      const timer = tradingOverlayResyncTimers.pop()
-      if (timer != null) window.clearTimeout(timer)
-    }
-    window.removeEventListener('klinecharts-pro-his-order-hover', onHisOrderHover as EventListener)
-    window.removeEventListener('resize', documentResize)
-    dispose(widgetRef!)
+    disposeChart()
   })
 
   createEffect((prev?: PrevSymbolPeriod) => {
@@ -389,105 +529,14 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   })
 
   createEffect(() => {
+    const api = instanceApi()
+    if (!api) return
     const t = theme()
-    instanceApi()?.setStyles(t)
+    api.setStyles(t)
     const color = t === 'dark' ? '#929AA5' : '#76808F'
-    instanceApi()?.setStyles({
-      indicator: {
-        tooltip: {
-          features: [
-            {
-              id: 'visible',
-              position: 'middle',
-              marginLeft: 6,
-              marginTop: 3,
-              marginRight: 0,
-              marginBottom: 0,
-              paddingLeft: 0,
-              paddingTop: 0,
-              paddingRight: 0,
-              paddingBottom: 0,
-              type: 'icon_font',
-              content: {
-                code: '\ue903',
-                family: 'icomoon',
-              },
-              size: 14,
-              color: color,
-              activeColor: color,
-              backgroundColor: 'transparent',
-              activeBackgroundColor: 'rgba(22, 119, 255, 0.15)'
-            },
-            {
-              id: 'invisible',
-              position: 'middle',
-              marginLeft: 6,
-              marginTop: 3,
-              marginRight: 0,
-              marginBottom: 0,
-              paddingLeft: 0,
-              paddingTop: 0,
-              paddingRight: 0,
-              paddingBottom: 0,
-              type: 'icon_font',
-              content: {
-                code: '\ue901',
-                family: 'icomoon',
-              },
-              size: 14,
-              color: color,
-              activeColor: color,
-              backgroundColor: 'transparent',
-              activeBackgroundColor: 'rgba(22, 119, 255, 0.15)'
-            },
-            {
-              id: 'setting',
-              position: 'middle',
-              marginLeft: 6,
-              marginTop: 3,
-              marginBottom: 0,
-              marginRight: 0,
-              paddingLeft: 0,
-              paddingTop: 0,
-              paddingRight: 0,
-              paddingBottom: 0,
-              type: 'icon_font',
-              content: {
-                code: '\ue902',
-                family: 'icomoon',
-              },
-              size: 14,
-              color: color,
-              activeColor: color,
-              backgroundColor: 'transparent',
-              activeBackgroundColor: 'rgba(22, 119, 255, 0.15)'
-            },
-            {
-              id: 'close',
-              position: 'middle',
-              marginLeft: 6,
-              marginTop: 3,
-              marginRight: 0,
-              marginBottom: 0,
-              paddingLeft: 0,
-              paddingTop: 0,
-              paddingRight: 0,
-              paddingBottom: 0,
-              type: 'icon_font',
-              content: {
-                code: '\ue900',
-                family: 'icomoon',
-              },
-              size: 14,
-              color: color,
-              activeColor: color,
-              backgroundColor: 'transparent',
-              activeBackgroundColor: 'rgba(22, 119, 255, 0.15)'
-            }
-          ]
-        }
-      }
-    })
+    if (lastTooltipFeatureColor === color) return
+    lastTooltipFeatureColor = color
+    api.setStyles(buildTooltipFeatureStyles(color))
   })
 
   createEffect(() => {
@@ -499,13 +548,19 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   })
 
   createEffect(() => {
-    setWidgetDefaultStyles(lodashClone(instanceApi()!.getStyles()))
+    const api = instanceApi()
+    if (!api || widgetDefaultStylesCaptured) return
+    setWidgetDefaultStyles(lodashClone(api.getStyles()))
+    widgetDefaultStylesCaptured = true
   })
 
   createEffect(() => {
-    if (styles()) {
-      instanceApi()?.setStyles(styles()!)
-    }
+    const api = instanceApi()
+    if (!api) return
+    const nextStyles = styles()
+    if (!nextStyles || lastExternalStyles === nextStyles) return
+    lastExternalStyles = nextStyles
+    api.setStyles(nextStyles)
   })
 
   createEffect(() => {
