@@ -5,7 +5,6 @@
 import { Coordinate, OverlayEvent, OverlayTemplate, TextStyle } from "klinecharts";
 
 import type { HisOrder } from "../../types/types";
-import { HIS_ORDER_HOVER_EVENT } from "./constants";
 
 const BUY_COLOR = "#2ebd85";
 const SELL_COLOR = "#f6465d";
@@ -15,28 +14,6 @@ const STACK_GAP = 14;
 /** K 线在屏幕上过“矮”时额外垫开标记与影线/实体的距离（含最新根与历史根） */
 const LATEST_BAR_MIN_PIXEL_SPAN = 18;
 
-const overlayAnchorMap = new Map<string, { x: number; y: number }>();
-const overlayContainerMap = new Map<string, HTMLElement | null>();
-
-function getEventContainer(event: OverlayEvent<unknown>): HTMLElement | null {
-  if (!event.overlay.id) return null;
-  return overlayContainerMap.get(event.overlay.id) ?? null;
-}
-
-function dispatchHisOrderHover(detail: {
-  visible: boolean;
-  order: HisOrderOverlayExtend | null;
-  anchorX: number | null;
-  anchorY: number | null;
-  sourceContainer: HTMLElement | null;
-}): void {
-  const target: Window | HTMLElement = detail.sourceContainer ?? window;
-  target.dispatchEvent(
-    new CustomEvent(HIS_ORDER_HOVER_EVENT, {
-      detail,
-    }),
-  );
-}
 type HisOrderOverlayExtend = HisOrder & {
   stackIndex?: number;
   barHigh?: number;
@@ -115,14 +92,6 @@ const hisOrderMark = (): OverlayTemplate => ({
     const y = ext.isBuy
       ? lowY + markOffset + stackIndex * STACK_GAP
       : highY - markOffset - stackIndex * STACK_GAP;
-    if (overlay.id) {
-      const paneDom = chart.getDom("candle_pane", "main");
-      if (paneDom) {
-        const rect = paneDom.getBoundingClientRect();
-        overlayAnchorMap.set(overlay.id, { x: rect.left + x, y: rect.top + y });
-        overlayContainerMap.set(overlay.id, paneDom.closest(".klinecharts-pro") as HTMLElement | null);
-      }
-    }
 
     const figures = [
       {
@@ -143,48 +112,10 @@ const hisOrderMark = (): OverlayTemplate => ({
 
     return figures;
   },
-  onMouseEnter: (event: OverlayEvent<unknown>) => {
-    const eventSource = event as OverlayEvent<unknown> & {
-      event?: { clientX?: number; clientY?: number };
-      mouseEvent?: { clientX?: number; clientY?: number };
-    };
-    const mappedAnchor = event.overlay.id ? overlayAnchorMap.get(event.overlay.id) : undefined;
-    const pointerX = mappedAnchor?.x ?? eventSource.event?.clientX ?? eventSource.mouseEvent?.clientX ?? null;
-    const pointerY = mappedAnchor?.y ?? eventSource.event?.clientY ?? eventSource.mouseEvent?.clientY ?? null;
-    const ext = event.overlay.extendData as HisOrderOverlayExtend | undefined;
-    if (ext) {
-      dispatchHisOrderHover({
-        visible: true,
-        order: ext,
-        anchorX: pointerX,
-        anchorY: pointerY,
-        sourceContainer: getEventContainer(event),
-      });
-    }
-    return false;
-  },
-  onMouseLeave: (event: OverlayEvent<unknown>) => {
-    const sourceContainer = getEventContainer(event);
-    if (event.overlay.id) {
-      overlayAnchorMap.delete(event.overlay.id);
-      overlayContainerMap.delete(event.overlay.id);
-    }
-    dispatchHisOrderHover({
-      visible: false,
-      order: null,
-      anchorX: null,
-      anchorY: null,
-      sourceContainer,
-    });
-    return false;
-  },
-  onRemoved: (event: OverlayEvent<unknown>) => {
-    if (event.overlay.id) {
-      overlayAnchorMap.delete(event.overlay.id);
-      overlayContainerMap.delete(event.overlay.id);
-    }
-    return false;
-  },
+  /** 历史订单浮层由 ChartPro crosshair 几何命中驱动，避免库内 hover 置顶导致下层圆收不到 enter */
+  onMouseEnter: () => false,
+  onMouseLeave: () => false,
+  onRemoved: () => false,
   onPressedMoveStart: () => false,
   onPressedMoving: () => false,
   onPressedMoveEnd: () => false,

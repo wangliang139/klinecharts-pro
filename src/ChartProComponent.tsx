@@ -22,6 +22,8 @@ import {
 } from 'solid-js'
 
 import {
+  ActionCallback,
+  Crosshair,
   dispose,
   FormatDateParams,
   SymbolInfo as KLineSymbolInfo,
@@ -52,6 +54,7 @@ import { translateTimezone } from './widget/timezone-modal/data'
 
 import Chart from './Chart'
 import { ALERT_DETAIL_OPEN_EVENT, HIS_ORDER_HOVER_EVENT } from './extension/trading/constants'
+import { pickBestHisOrderMarkAtPanePixel } from './extension/trading/hisOrderMarkHitTest'
 import { setPriceAlertOverlayHandlers } from './extension/trading/priceAlertLine'
 import { formatTimeByTz } from './helpers'
 import {
@@ -296,6 +299,33 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
       setHisOrderHoverAnchor({ x: detail.x, y: detail.y })
     }
   )
+  let lastCrosshairHisOrderPickId: string | null = null
+  const onCrosshairForHisOrderHover: ActionCallback = (data) => {
+    const cr = data as Crosshair | undefined
+    if (!cr) return
+    const api = instanceApi()
+    const chartEl = widgetRef as HTMLElement | undefined
+    const currentContainer = chartEl?.closest('.klinecharts-pro') as HTMLElement | null
+    if (!api || !currentContainer) return
+    if (cr.paneId !== 'candle_pane') return
+    if (typeof cr.x !== 'number' || typeof cr.y !== 'number') return
+
+    const pick = pickBestHisOrderMarkAtPanePixel(api, cr.x, cr.y)
+    if (pick) {
+      if (pick.overlayId === lastCrosshairHisOrderPickId) return
+      lastCrosshairHisOrderPickId = pick.overlayId
+      hoverController.setExclusiveHover({
+        order: pick.order,
+        anchorX: pick.anchorX,
+        anchorY: pick.anchorY,
+      })
+      return
+    }
+    if (lastCrosshairHisOrderPickId != null) {
+      lastCrosshairHisOrderPickId = null
+      hoverController.resetHoverToHidden()
+    }
+  }
   const resyncScheduler = createResyncScheduler(
     () => syncTradingOverlays(instanceApi()),
     TRADING_RESYNC_DELAYS
@@ -341,6 +371,8 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   const disposeChart = () => {
     if (isDisposed) return
     isDisposed = true
+    instanceApi()?.unsubscribeAction('onCrosshairChange', onCrosshairForHisOrderHover)
+    lastCrosshairHisOrderPickId = null
     hoverController.clear()
     resyncScheduler.clear()
     if (resizeRafId != null) {
@@ -483,9 +515,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
         // console.info('chart zoomed: ', data)
       })
 
-      instanceApi()?.subscribeAction('onCrosshairChange', (data) => {
-        // console.info('crosshair change: ', data)
-      })
+      instanceApi()?.subscribeAction('onCrosshairChange', onCrosshairForHisOrderHover)
       restoreChartState(props.overrides)
       bindTradingStore(instanceApi()!)
       loadTradingConfigFromStorage(instanceApi())

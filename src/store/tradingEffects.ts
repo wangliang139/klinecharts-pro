@@ -42,7 +42,27 @@ export function createHisOrderHoverController(
     }, hideDelay);
   };
 
-  return { onEvent, clear };
+  /** 十字光标几何命中：当前唯一 hover 目标（重叠标记下覆盖库内 z 序） */
+  const setExclusiveHover = (detail: {
+    order: HisOrder | null;
+    anchorX: number | null;
+    anchorY: number | null;
+  }) => {
+    clear();
+    apply({
+      visible: true,
+      order: detail.order,
+      x: detail.anchorX ?? null,
+      y: detail.anchorY ?? null,
+    });
+  };
+
+  const resetHoverToHidden = () => {
+    clear();
+    apply({ visible: false, order: null, x: null, y: null });
+  };
+
+  return { onEvent, clear, setExclusiveHover, resetHoverToHidden };
 }
 
 export function createResyncScheduler(sync: () => void, delays: readonly number[]) {
