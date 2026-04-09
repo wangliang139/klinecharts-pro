@@ -185,12 +185,12 @@ const HisOrderHover: Component<HisOrderHoverProps> = (props) => {
 
   createEffect(() => {
     const L = layout();
-    console.log("[HisOrderHover]", {
-      orderId: props.order.orderId ?? props.order.id,
-      hover: { x: L.anchorX, y: L.anchorY, hasAnchor: L.hasAnchor },
-      popupSize: { width: L.w, height: L.h },
-      popupPosition: { left: L.left, top: L.top },
-    });
+    // console.log("[HisOrderHover]", {
+    //   orderId: props.order.orderId ?? props.order.id,
+    //   hover: { x: L.anchorX, y: L.anchorY, hasAnchor: L.hasAnchor },
+    //   popupSize: { width: L.w, height: L.h },
+    //   popupPosition: { left: L.left, top: L.top },
+    // });
   });
 
   return (

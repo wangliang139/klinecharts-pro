@@ -317,6 +317,19 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
       setChartAlertDetail(d.alert)
     }
   }
+  const onHisOrderHover = (evt: Event) => {
+    const detail = (evt as CustomEvent<{ sourceContainer?: HTMLElement | null }>).detail
+    const sourceContainer = detail?.sourceContainer ?? null
+    const currentContainer = (
+      props.rootElementId
+        ? document.getElementById(props.rootElementId)?.closest('.klinecharts-pro')
+        : null
+    ) as HTMLElement | null
+    if (sourceContainer && currentContainer && sourceContainer !== currentContainer) {
+      return
+    }
+    hoverController.onEvent(evt)
+  }
 
   const disposeChart = () => {
     if (isDisposed) return
@@ -327,7 +340,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
       window.cancelAnimationFrame(resizeRafId)
       resizeRafId = null
     }
-    window.removeEventListener(HIS_ORDER_HOVER_EVENT, hoverController.onEvent as EventListener)
+    window.removeEventListener(HIS_ORDER_HOVER_EVENT, onHisOrderHover as EventListener)
     window.removeEventListener(ALERT_DETAIL_OPEN_EVENT, onAlertDetailOpen)
     window.removeEventListener('resize', documentResize)
     if (widgetRef) {
@@ -377,7 +390,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   }
 
   onMount(() => {
-    window.addEventListener(HIS_ORDER_HOVER_EVENT, hoverController.onEvent as EventListener)
+    window.addEventListener(HIS_ORDER_HOVER_EVENT, onHisOrderHover as EventListener)
     window.addEventListener(ALERT_DETAIL_OPEN_EVENT, onAlertDetailOpen)
     window.addEventListener('resize', documentResize)
     setInstanceApi(Chart.init(widgetRef!, {

@@ -7,6 +7,14 @@ import { Coordinate, OverlayEvent, OverlayTemplate, TextStyle } from "klinechart
 import type { HisOrder } from "../../types/types";
 import { HIS_ORDER_HOVER_EVENT } from "./constants";
 
+function getEventContainer(event: OverlayEvent<unknown>): HTMLElement | null {
+  const source = event as OverlayEvent<unknown> & {
+    chart?: { getDom?: (paneId: string, position?: string) => HTMLElement | null };
+  };
+  const pane = source.chart?.getDom?.("candle_pane", "main") as HTMLElement | null | undefined;
+  return pane?.closest(".klinecharts-pro") as HTMLElement | null;
+}
+
 const BUY_COLOR = "#2ebd85";
 const SELL_COLOR = "#f6465d";
 const MARK_RADIUS = 6;
@@ -133,7 +141,13 @@ const historicalOrderMark = (): OverlayTemplate => ({
     if (ext) {
       window.dispatchEvent(
         new CustomEvent(HIS_ORDER_HOVER_EVENT, {
-          detail: { visible: true, order: ext, anchorX: pointerX, anchorY: pointerY },
+          detail: {
+            visible: true,
+            order: ext,
+            anchorX: pointerX,
+            anchorY: pointerY,
+            sourceContainer: getEventContainer(event),
+          },
         }),
       );
     }
@@ -145,7 +159,13 @@ const historicalOrderMark = (): OverlayTemplate => ({
     }
     window.dispatchEvent(
       new CustomEvent(HIS_ORDER_HOVER_EVENT, {
-        detail: { visible: false, order: null, anchorX: null, anchorY: null },
+        detail: {
+          visible: false,
+          order: null,
+          anchorX: null,
+          anchorY: null,
+          sourceContainer: getEventContainer(event),
+        },
       }),
     );
     return false;

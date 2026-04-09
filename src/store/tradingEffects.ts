@@ -5,6 +5,7 @@ export type HisOrderHoverDetail = {
   order: HisOrder | null;
   anchorX?: number | null;
   anchorY?: number | null;
+  sourceContainer?: HTMLElement | null;
 };
 
 export function createHisOrderHoverController(
