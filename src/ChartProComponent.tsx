@@ -90,6 +90,29 @@ const HIS_ORDER_HOVER_HIDE_DELAY = 120
 const ALERT_OVERLAY_GROUP = 'alert_overlays'
 const ALERT_PRICE_TYPES: AlertType[] = ['price_reach', 'price_rise_to', 'price_fall_to']
 
+/** JSON / 外部接口常把 price 写成字符串；列表 UI 仍能展示，但原先 Number.isFinite 会失败导致不同步 overlay */
+function resolvedAlertPriceValue(alertItem: AlertItem): number | null {
+  const p = alertItem.price as unknown
+  if (p == null) return null
+  if (typeof p === 'number' && Number.isFinite(p)) return p
+  if (typeof p === 'string' && p.trim() !== '') {
+    const n = Number(p.trim().replace(/,/g, ''))
+    return Number.isFinite(n) ? n : null
+  }
+  return null
+}
+
+function alertSymbolMatchesChartSymbol(alertItem: AlertItem, chartSymbol: SymbolInfo): boolean {
+  const raw = alertItem.symbol?.trim()
+  if (!raw) return true
+  if (raw === chartSymbol.ticker) return true
+  const name = chartSymbol.name?.trim()
+  if (name && raw === name) return true
+  const shortName = chartSymbol.shortName?.trim()
+  if (shortName && raw === shortName) return true
+  return false
+}
+
 function buildTooltipFeatureStyles(color: string) {
   return {
     indicator: {
@@ -237,26 +260,30 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
     if (!api || !currentSymbol) return
     const lastTs = api.getDataList().at(-1)?.timestamp ?? Date.now()
     const currentAlerts = alerts()
-    const priceAlerts = currentAlerts.filter((alertItem) => {
-      if (!ALERT_PRICE_TYPES.includes(alertItem.type)) return false
-      if (!Number.isFinite(alertItem.price)) return false
-      if (alertItem.symbol && alertItem.symbol !== currentSymbol.ticker) return false
-      return true
-    })
+    const priceAlerts: Array<{ alertItem: AlertItem; price: number }> = []
+    for (let i = 0; i < currentAlerts.length; i++) {
+      const alertItem = currentAlerts[i]!
+      if (!ALERT_PRICE_TYPES.includes(alertItem.type)) continue
+      const price = resolvedAlertPriceValue(alertItem)
+      if (price == null) continue
+      if (!alertSymbolMatchesChartSymbol(alertItem, currentSymbol)) continue
+      priceAlerts.push({ alertItem, price })
+    }
     const aliveIds = new Set<string>()
-    priceAlerts.forEach((alertItem, index) => {
+    priceAlerts.forEach(({ alertItem, price }, index) => {
       const idSuffix = safeOverlaySegment(alertItem.id || `idx_${index}`)
       const id = `alert-${idSuffix}`
       aliveIds.add(id)
       const existing = (api.getOverlays({ id }) ?? []).length > 0
+      const alertForOverlay: AlertItem = { ...alertItem, price }
       const payload = {
         id,
         name: 'priceAlertLine',
         groupId: ALERT_OVERLAY_GROUP,
         paneId: 'candle_pane' as const,
         mode: 'normal' as const,
-        points: [{ timestamp: lastTs, value: alertItem.price! }],
-        extendData: { alert: alertItem, showInfo: false },
+        points: [{ timestamp: lastTs, value: price }],
+        extendData: { alert: alertForOverlay, showInfo: false },
       }
       if (!existing) {
         api.createOverlay(payload)
