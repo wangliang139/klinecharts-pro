@@ -312,16 +312,27 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   })
 
   const onAlertDetailOpen = (e: Event) => {
-    const d = (e as CustomEvent<{ alert: AlertItem }>).detail
+    const d = (e as CustomEvent<{ alert: AlertItem, sourceContainer?: HTMLElement | null }>).detail
+    const sourceContainer = d?.sourceContainer ?? null
+    const currentContainer = (widgetRef as HTMLElement | undefined)?.closest('.klinecharts-pro') as HTMLElement | null
+    if (!currentContainer) {
+      return
+    }
+    if (sourceContainer && sourceContainer !== currentContainer) {
+      return
+    }
     if (d?.alert) {
       setChartAlertDetail(d.alert)
     }
   }
   const onHisOrderHover = (evt: Event) => {
-    const detail = (evt as CustomEvent<{ sourceContainer?: HTMLElement | null }>).detail
+    const detail = (evt as CustomEvent<{visible: boolean, sourceContainer?: HTMLElement | null }>).detail
     const sourceContainer = detail?.sourceContainer ?? null
     const currentContainer = (widgetRef as HTMLElement | undefined)?.closest('.klinecharts-pro') as HTMLElement | null
-    if (sourceContainer && currentContainer && sourceContainer !== currentContainer) {
+    if (!currentContainer) {
+      return
+    }
+    if (sourceContainer && sourceContainer !== currentContainer) {
       return
     }
     hoverController.onEvent(evt)
@@ -336,6 +347,9 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
       window.cancelAnimationFrame(resizeRafId)
       resizeRafId = null
     }
+    const currentContainer = (widgetRef as HTMLElement | undefined)?.closest('.klinecharts-pro') as HTMLElement | null
+    currentContainer?.removeEventListener(HIS_ORDER_HOVER_EVENT, onHisOrderHover as EventListener)
+    currentContainer?.removeEventListener(ALERT_DETAIL_OPEN_EVENT, onAlertDetailOpen as EventListener)
     window.removeEventListener(HIS_ORDER_HOVER_EVENT, onHisOrderHover as EventListener)
     window.removeEventListener(ALERT_DETAIL_OPEN_EVENT, onAlertDetailOpen)
     window.removeEventListener('resize', documentResize)
@@ -386,7 +400,12 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   }
 
   onMount(() => {
+    const currentContainer = (widgetRef as HTMLElement | undefined)?.closest('.klinecharts-pro') as HTMLElement | null
+    currentContainer?.addEventListener(HIS_ORDER_HOVER_EVENT, onHisOrderHover as EventListener)
+    currentContainer?.addEventListener(ALERT_DETAIL_OPEN_EVENT, onAlertDetailOpen as EventListener)
+    // Fallback for legacy/global emitters.
     window.addEventListener(HIS_ORDER_HOVER_EVENT, onHisOrderHover as EventListener)
+    // Fallback for legacy/global emitters.
     window.addEventListener(ALERT_DETAIL_OPEN_EVENT, onAlertDetailOpen)
     window.addEventListener('resize', documentResize)
     setInstanceApi(Chart.init(widgetRef!, {

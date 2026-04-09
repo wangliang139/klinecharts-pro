@@ -22,6 +22,21 @@ function getEventContainer(event: OverlayEvent<unknown>): HTMLElement | null {
   if (!event.overlay.id) return null;
   return overlayContainerMap.get(event.overlay.id) ?? null;
 }
+
+function dispatchHisOrderHover(detail: {
+  visible: boolean;
+  order: HisOrderOverlayExtend | null;
+  anchorX: number | null;
+  anchorY: number | null;
+  sourceContainer: HTMLElement | null;
+}): void {
+  const target: Window | HTMLElement = detail.sourceContainer ?? window;
+  target.dispatchEvent(
+    new CustomEvent(HIS_ORDER_HOVER_EVENT, {
+      detail,
+    }),
+  );
+}
 type HisOrderOverlayExtend = HisOrder & {
   stackIndex?: number;
   barHigh?: number;
@@ -46,8 +61,8 @@ const markerTextStyle: TextStyle = {
   paddingBottom: 0,
 };
 
-const historicalOrderMark = (): OverlayTemplate => ({
-  name: "historicalOrderMark",
+const hisOrderMark = (): OverlayTemplate => ({
+  name: "hisOrderMark",
   mode: "normal",
   totalStep: 1,
   lock: true,
@@ -122,7 +137,7 @@ const historicalOrderMark = (): OverlayTemplate => ({
         type: "text",
         attrs: { x, y, text: markText, align: "center", baseline: "middle" },
         styles: markerTextStyle,
-        ignoreEvent: false,
+        ignoreEvent: true,
       },
     ];
 
@@ -138,36 +153,29 @@ const historicalOrderMark = (): OverlayTemplate => ({
     const pointerY = mappedAnchor?.y ?? eventSource.event?.clientY ?? eventSource.mouseEvent?.clientY ?? null;
     const ext = event.overlay.extendData as HisOrderOverlayExtend | undefined;
     if (ext) {
-      window.dispatchEvent(
-        new CustomEvent(HIS_ORDER_HOVER_EVENT, {
-          detail: {
-            visible: true,
-            order: ext,
-            anchorX: pointerX,
-            anchorY: pointerY,
-            sourceContainer: getEventContainer(event),
-          },
-        }),
-      );
+      dispatchHisOrderHover({
+        visible: true,
+        order: ext,
+        anchorX: pointerX,
+        anchorY: pointerY,
+        sourceContainer: getEventContainer(event),
+      });
     }
     return false;
   },
   onMouseLeave: (event: OverlayEvent<unknown>) => {
+    const sourceContainer = getEventContainer(event);
     if (event.overlay.id) {
       overlayAnchorMap.delete(event.overlay.id);
       overlayContainerMap.delete(event.overlay.id);
     }
-    window.dispatchEvent(
-      new CustomEvent(HIS_ORDER_HOVER_EVENT, {
-        detail: {
-          visible: false,
-          order: null,
-          anchorX: null,
-          anchorY: null,
-          sourceContainer: getEventContainer(event),
-        },
-      }),
-    );
+    dispatchHisOrderHover({
+      visible: false,
+      order: null,
+      anchorX: null,
+      anchorY: null,
+      sourceContainer,
+    });
     return false;
   },
   onRemoved: (event: OverlayEvent<unknown>) => {
@@ -191,4 +199,4 @@ const historicalOrderMark = (): OverlayTemplate => ({
   },
 });
 
-export default historicalOrderMark;
+export default hisOrderMark;

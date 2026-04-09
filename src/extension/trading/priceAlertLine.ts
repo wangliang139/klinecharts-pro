@@ -16,6 +16,21 @@ const ALERT_HOVER_LEAVE_MS = 140;
 
 const alertHoverHideTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
+function getOverlayEventContainer(event: OverlayEvent<unknown>): HTMLElement | null {
+  const paneDom = event.chart.getDom("candle_pane", "main");
+  if (!paneDom) return null;
+  return paneDom.closest(".klinecharts-pro") as HTMLElement | null;
+}
+
+function dispatchAlertDetailOpen(detail: { alert: AlertItem; sourceContainer: HTMLElement | null }): void {
+  const target: Window | HTMLElement = detail.sourceContainer ?? window;
+  target.dispatchEvent(
+    new CustomEvent(ALERT_DETAIL_OPEN_EVENT, {
+      detail,
+    }),
+  );
+}
+
 function clearAlertHoverHideTimer(overlayId: string) {
   const t = alertHoverHideTimers.get(overlayId);
   if (t != null) {
@@ -237,9 +252,10 @@ const priceAlertLine = (): OverlayTemplate => ({
     if (!ext.alert) {
       return false;
     }
-    window.dispatchEvent(
-      new CustomEvent(ALERT_DETAIL_OPEN_EVENT, { detail: { alert: ext.alert } }),
-    );
+    dispatchAlertDetailOpen({
+      alert: ext.alert,
+      sourceContainer: getOverlayEventContainer(event),
+    });
     return false;
   },
 });

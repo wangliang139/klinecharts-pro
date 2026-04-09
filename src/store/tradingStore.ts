@@ -33,7 +33,7 @@ type ChartStateStorage = Record<string, unknown> & {
 
 type DesiredOverlay = {
   id: string;
-  name: "positionAvgLine" | "liquidationLine" | "pendingOrderLine" | "historicalOrderMark";
+  name: "positionAvgLine" | "liquidationLine" | "pendingOrderLine" | "hisOrderMark";
   points: Array<{ timestamp: number; value: number }>;
   extendData: Record<string, unknown>;
   signature: string;
@@ -353,10 +353,10 @@ function buildDesiredOverlays(
       };
       desired.push({
         id,
-        name: "historicalOrderMark",
+        name: "hisOrderMark",
         points,
         extendData,
-        signature: makeOverlaySignature("historicalOrderMark", points, extendData),
+        signature: makeOverlaySignature("hisOrderMark", points, extendData),
       });
     });
   }
