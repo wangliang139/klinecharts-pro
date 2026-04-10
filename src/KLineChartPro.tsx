@@ -80,8 +80,8 @@ export default class KlineChartPro implements ChartPro {
           }
           overrides={options.overrides ?? {}}
           timezone={options.timezone ?? 'Etc/UTC'}
-          mainIndicators={options.mainIndicators ?? ['MA']}
-          subIndicators={options.subIndicators ?? ['VOL']}
+          mainIndicators={options.mainIndicators ?? []}
+          subIndicators={options.subIndicators ?? []}
           dataTimestamp={options.dataTimestamp ?? new Date().getTime()}
           onAddAlert={options.onAddAlert ?? (() => true)}
           onRemoveAlert={options.onRemoveAlert ?? (() => true)}

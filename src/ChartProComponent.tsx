@@ -67,7 +67,10 @@ import {
 import { useChartState } from './store/chartStateStore'
 import {
   ChartProComponentProps, instanceApi, loadingVisible,
-  period, setInstanceApi, setPeriod as setCurrentPeriod, setRooltelId, setSelectedOverlay, setStyles, setSymbol, styles, symbol
+  period,
+  setPeriod as setCurrentPeriod,
+  setInstanceApi,
+  setRooltelId, setSelectedOverlay, setStyles, setSymbol, styles, symbol
 } from './store/chartStore'
 import { findMatchedPeriod, persistPeriod, resolveInitialPeriod } from './store/periodStore'
 import { persistTimezone, resolveInitialTimezone } from './store/timezoneStore'
@@ -83,7 +86,7 @@ import {
   syncTradingOverlays
 } from './store/tradingStore'
 import { AlertItem, HisOrder, PendingOrder, Period, Position, ProChart, SymbolInfo } from './types/types'
-const { createIndicator, pushOverlay, restoreChartState } = useChartState()
+const { createIndicator, modifyIndicator, pushOverlay, popIndicator, restoreChartState, restoreIndicators, setIndicatorVisible } = useChartState()
 
 interface PrevSymbolPeriod {
   symbol: SymbolInfo
@@ -313,7 +316,10 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
     setSubIndicators,
     indicatorSettingModalParams,
     setIndicatorSettingModalParams,
-    createIndicator
+    createIndicator: (chart, indicatorName, isStack, paneOptions) => createIndicator(chart, indicatorName, isStack, paneOptions, true),
+    popIndicator,
+    setIndicatorVisible,
+    modifyIndicator
   })
 
   const onAlertDetailOpen = (e: Event) => {
@@ -516,19 +522,10 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
     }
 
     const w = chartApiRef
-
     if (w) {
-      mainIndicators().forEach(indicator => {
-        createIndicator(w, indicator, true, { id: 'candle_pane' })
-      })
-      const subIndicatorMap: SubIndicatorMap = {}
-      props.subIndicators!.forEach(indicator => {
-        const paneId = createIndicator(w, indicator, true)
-        if (paneId) {
-          subIndicatorMap[indicator] = paneId
-        }
-      })
-      setSubIndicators(subIndicatorMap)
+      const restoredIndicatorState = restoreIndicators(w, props.mainIndicators!, props.subIndicators!)
+      setMainIndicators(restoredIndicatorState.mainIndicators)
+      setSubIndicators(restoredIndicatorState.subIndicators as SubIndicatorMap)
     }
   })
 

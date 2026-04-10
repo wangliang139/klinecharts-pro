@@ -11,14 +11,14 @@ import {
   TooltipFeatureStyle,
 } from "klinecharts";
 import loadash from "lodash";
-import { ChartObjType, OverlayProperties, ProChart, ProOverlay } from "../types";
+import { ChartObjType, IndicatorsType, OverlayProperties, ProChart, ProOverlay } from "../types";
 import {
   instanceApi,
   mainIndicators,
   PaneProperties,
+  selectedOverlay,
   setChartModified,
   setMainIndicators,
-  selectedOverlay,
   setSelectedOverlay,
   setStyles,
   setSubIndicators,
@@ -50,6 +50,11 @@ type IndicatorSettingsType = {
   indicatorName: string;
   paneId: string;
   calcParams: any[];
+};
+
+type RestoredIndicators = {
+  mainIndicators: string[];
+  subIndicators: Record<string, string>;
 };
 
 type CssRootVar =
@@ -120,67 +125,95 @@ const refineOverlayObj = (overlay: Overlay): OverlayCreate => {
   return cleanOverlay;
 };
 
+function readChartStateObj(): ChartObjType {
+  try {
+    const raw = localStorage.getItem("chartstatedata");
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as ChartObjType;
+    if (Array.isArray(parsed.indicators)) {
+      parsed.indicators = parsed.indicators
+        .map(indicator => normalizeIndicatorsType(indicator))
+        .filter((indicator): indicator is IndicatorsType => indicator !== null);
+    }
+    return parsed;
+  } catch {
+    return {};
+  }
+}
+
+function writeChartStateObj(chartObj: ChartObjType): void {
+  localStorage.setItem("chartstatedata", JSON.stringify(chartObj));
+}
+
+function isSubIndicatorPane(paneId?: string): boolean {
+  return !!paneId && paneId !== "candle_pane";
+}
+
+function toIndicatorsType(indicator: Indicator, paneOptions?: PaneOptions): IndicatorsType {
+  return {
+    name: indicator.name,
+    visible: indicator.visible ?? true,
+    calcParams: Array.isArray(indicator.calcParams) ? [...indicator.calcParams] as Array<number> : [],
+    isMainPane: paneOptions?.id === "candle_pane",
+  };
+}
+
+function toIndicatorCreate(indicator: IndicatorsType): IndicatorCreate {
+  return {
+    name: indicator.name,
+    visible: indicator.visible,
+    calcParams: indicator.calcParams,
+  };
+}
+
+function normalizeIndicatorsType(input: unknown): IndicatorsType | null {
+  if (!input || typeof input !== "object") return null;
+
+  const next = input as Partial<IndicatorsType> & {
+    value?: Partial<IndicatorCreate>;
+    paneOptions?: Partial<PaneOptions>;
+  };
+
+  if (typeof next.name === "string" && typeof next.visible === "boolean" && Array.isArray(next.calcParams)) {
+    return {
+      name: next.name,
+      visible: next.visible,
+      calcParams: next.calcParams.map(value => Number(value)).filter(value => Number.isFinite(value)),
+      isMainPane: next.isMainPane === true,
+    };
+  }
+
+  if (typeof next.value?.name === "string") {
+    return {
+      name: next.value.name,
+      visible: typeof next.value.visible === "boolean" ? next.value.visible : true,
+      calcParams: Array.isArray(next.value.calcParams)
+        ? next.value.calcParams.map(value => Number(value)).filter(value => Number.isFinite(value))
+        : [],
+      isMainPane: next.paneOptions?.id === "candle_pane",
+    };
+  }
+
+  return null;
+}
+
 export const useChartState = () => {
   const syncIndiObject = (indicator: Indicator, isStack?: boolean, paneOptions?: PaneOptions): boolean => {
-    const chartStateObj = localStorage.getItem(`chartstatedata`);
-    let chartObj: ChartObjType;
-
-    const indi = refineIndiObj(loadash.cloneDeep(indicator));
-    if (chartStateObj) {
-      chartObj = JSON.parse(chartStateObj!);
-      if (!chartObj.indicators) {
-        chartObj.indicators = [
-          {
-            value: indi,
-            isStack: isStack,
-            paneOptions,
-          },
-        ];
-        // chartObj = {
-        //   styleObj: chartObj.styleObj,
-        //   overlays: chartObj.overlays,
-        //   figures: chartObj.figures,
-        //   indicators: [{
-        //     value: indi,
-        //     isStack: isStack,
-        //     paneOptions
-        //   }]
-        // }
-      } else {
-        if (
-          chartObj.indicators.find(
-            (_indi) => _indi.value?.name === indi.name && _indi.paneOptions?.id === paneOptions?.id,
-          )
-        ) {
-          chartObj.indicators = chartObj.indicators.map((_indi) =>
-            _indi.value?.id !== indi.id
-              ? _indi
-              : {
-                  value: indi,
-                  isStack,
-                  paneOptions,
-                },
-          );
-        } else {
-          chartObj.indicators!.push({
-            value: indi,
-            isStack,
-            paneOptions,
-          });
-        }
-      }
+    const chartObj = readChartStateObj();
+    const indi = toIndicatorsType(refineIndiObj(loadash.cloneDeep(indicator)) as Indicator, paneOptions);
+    if (!chartObj.indicators) {
+      chartObj.indicators = [indi];
     } else {
-      chartObj = {
-        indicators: [
-          {
-            value: indi,
-            isStack,
-            paneOptions,
-          },
-        ],
-      };
+      const matchedIndex = chartObj.indicators.findIndex(
+        (_indi) => _indi.name === indi.name && _indi.isMainPane === indi.isMainPane,
+      );
+      if (matchedIndex > -1) {
+        chartObj.indicators[matchedIndex] = indi;
+      } else {
+        chartObj.indicators.push(indi);
+      }
     }
-    localStorage.setItem(`chartstatedata`, JSON.stringify(chartObj));
+    writeChartStateObj(chartObj);
     setChartModified(true);
     return false;
   };
@@ -233,19 +266,22 @@ export const useChartState = () => {
 
   function createIndicator(
     widget: ProChart,
-    indicatorName: string,
+    indicatorName: string | IndicatorCreate,
     isStack?: boolean,
     paneOptions?: PaneOptions,
     docallback = false,
   ): Nullable<string> {
-    if (indicatorName === "VOL") {
+    const resolvedIndicatorName = typeof indicatorName === "string" ? indicatorName : indicatorName.name;
+    if (resolvedIndicatorName === "VOL") {
       paneOptions = { axis: { gap: { bottom: 2 } }, ...paneOptions };
     }
     const isCandlePane = paneOptions?.id === "candle_pane";
+    const indicatorValue = typeof indicatorName === "string" ? { name: indicatorName } : loadash.cloneDeep(indicatorName);
     const id =
       widget.createIndicator(
         {
-          name: indicatorName,
+          ...indicatorValue,
+          name: resolvedIndicatorName,
           createTooltipDataSource: (param): IndicatorTooltipData => {
             const indiStyles = param.chart.getStyles().indicator;
             const features = indiStyles.tooltip.features;
@@ -270,12 +306,63 @@ export const useChartState = () => {
       ) ?? null;
 
     if (id && docallback) {
-      const indi = widget?.getIndicators({ id, name: indicatorName })[0];
-      if (indi) syncIndiObject(indi as Indicator, isStack, { id: id });
+      const indi = widget?.getIndicators({ id, name: resolvedIndicatorName })[0];
+      if (indi) {
+        const nextPaneOptions = paneOptions?.id === "candle_pane" ? paneOptions : { ...(paneOptions ?? {}), id };
+        syncIndiObject(indi as Indicator, isStack, nextPaneOptions);
+      }
     }
 
     return id;
   }
+
+  const restoreIndicators = (
+    widget: ProChart,
+    fallbackMainIndicators: string[],
+    fallbackSubIndicators: string[],
+  ): RestoredIndicators => {
+    const chartObj = readChartStateObj();
+    const storedIndicators = chartObj.indicators ?? [];
+    const hasStoredIndicators = Array.isArray(chartObj.indicators);
+    const mainIndicatorNames: string[] = [];
+    const subIndicatorMap: Record<string, string> = {};
+
+    if (hasStoredIndicators) {
+      const restoredSubIndicatorNames = new Set<string>();
+      storedIndicators.forEach((indicator) => {
+        const isSubIndicator = !indicator.isMainPane;
+        if (isSubIndicator && restoredSubIndicatorNames.has(indicator.name)) {
+          return;
+        }
+        const id = createIndicator(
+          widget,
+          toIndicatorCreate(indicator),
+          indicator.isMainPane,
+          indicator.isMainPane ? { id: "candle_pane" } : undefined,
+        );
+        if (indicator.isMainPane) {
+          mainIndicatorNames.push(indicator.name);
+        } else if (id) {
+          subIndicatorMap[indicator.name] = id;
+          restoredSubIndicatorNames.add(indicator.name);
+        }
+      });
+      return { mainIndicators: mainIndicatorNames, subIndicators: subIndicatorMap };
+    }
+
+    fallbackMainIndicators.forEach((indicator) => {
+      createIndicator(widget, indicator, true, { id: "candle_pane" }, true);
+      mainIndicatorNames.push(indicator);
+    });
+    fallbackSubIndicators.forEach((indicator) => {
+      const id = createIndicator(widget, indicator, false, undefined, true);
+      if (id) {
+        subIndicatorMap[indicator] = id;
+      }
+    });
+
+    return { mainIndicators: mainIndicatorNames, subIndicators: subIndicatorMap };
+  };
 
   const pushOverlay = (
     overlay: OverlayCreate & { properties?: DeepPartial<OverlayProperties> },
@@ -400,41 +487,63 @@ export const useChartState = () => {
   };
 
   const modifyIndicator = (modalParams: IndicatorSettingsType, params: any) => {
-    const chartStateObj = localStorage.getItem(`chartstatedata`);
-    if (chartStateObj) {
-      let chartObj: ChartObjType = JSON.parse(chartStateObj);
-
-      chartObj.indicators = chartObj.indicators?.map((indi) => {
-        if (indi.value?.name === modalParams.indicatorName) {
-          indi.value.name = modalParams.indicatorName;
-          indi.value.calcParams = params;
-          indi.paneOptions!.id = modalParams.paneId;
-        }
-        return indi;
-      });
-      localStorage.setItem(`chartstatedata`, JSON.stringify(chartObj));
-      setChartModified(true);
-      instanceApi()?.overrideIndicator({
-        name: modalParams.indicatorName,
-        calcParams: params,
-        paneId: modalParams.paneId,
-      });
-    }
+    const chartObj = readChartStateObj();
+    const isMainPane = modalParams.paneId === "candle_pane";
+    chartObj.indicators = chartObj.indicators?.map((indi) => {
+      if (indi.name === modalParams.indicatorName && indi.isMainPane === isMainPane) {
+        indi.calcParams = [...params];
+      }
+      return indi;
+    });
+    writeChartStateObj(chartObj);
+    setChartModified(true);
+    instanceApi()?.overrideIndicator({
+      name: modalParams.indicatorName,
+      calcParams: params,
+      paneId: modalParams.paneId,
+    });
   };
-  const popIndicator = (id: string, name?: string, paneId?: string) => {
-    const chartStateObj = localStorage.getItem(`chartstatedata`);
-    instanceApi()?.removeIndicator({ id, paneId, name });
-
-    if (chartStateObj) {
-      let chartObj: ChartObjType = JSON.parse(chartStateObj);
-
-      chartObj.indicators = chartObj.indicators?.filter(
-        (indi) => indi.paneOptions?.id !== paneId && indi.value?.name !== name,
-      );
-      localStorage.setItem(`chartstatedata`, JSON.stringify(chartObj));
-      setChartModified(true);
+  const setIndicatorVisible = (name: string, paneId: string, visible: boolean, id?: string) => {
+    const chartObj = readChartStateObj();
+    const isMainPane = paneId === "candle_pane";
+    chartObj.indicators = chartObj.indicators?.map((indi) => {
+      if (indi.name === name && indi.isMainPane === isMainPane) {
+        indi.visible = visible;
+      }
+      return indi;
+    });
+    writeChartStateObj(chartObj);
+    setChartModified(true);
+    instanceApi()?.overrideIndicator({ name, paneId, visible, id });
+  };
+  const popIndicator = (name: string, paneId?: string, id?: string): boolean => {
+    const api = instanceApi();
+    if (!api) {
+      return false;
     }
-    return;
+    let removed = false;
+    if (paneId && paneId !== "candle_pane") {
+      removed = api.removeIndicator({ paneId, name });
+    }
+    if (!removed && id) {
+      removed = api.removeIndicator({ id });
+    }
+    if (!removed && paneId) {
+      removed = api.removeIndicator({ paneId, name });
+    }
+    if (!removed) {
+      return false;
+    }
+    const chartObj = readChartStateObj();
+    chartObj.indicators = chartObj.indicators?.filter((indi) => {
+      if (isSubIndicatorPane(paneId)) {
+        return indi.name !== name || indi.isMainPane;
+      }
+      return !(indi.name === name && indi.isMainPane);
+    });
+    writeChartStateObj(chartObj);
+    setChartModified(true);
+    return true;
   };
 
   const setCssRootVar = (name: CssRootVar, value: string) => {
@@ -477,26 +586,6 @@ export const useChartState = () => {
           pushOverlay(overlay.value!, overlay.paneId, true);
         });
       }
-      if (chartObj.indicators) {
-        setTimeout(() => {
-          const newMainIndicators = [...mainIndicators()];
-          const newSubIndicators = { ...subIndicators };
-
-          chartObj.indicators!.forEach((indicator) => {
-            if (indicator.value) {
-              instanceApi()?.createIndicator(indicator.value, indicator.isStack, indicator.paneOptions);
-              if (indicator.paneOptions?.id === "candle_pane") {
-                newMainIndicators.push(indicator.value.name);
-              } else {
-                //@ts-expect-error
-                newSubIndicators[indicator.value.name] = indicator.paneOptions?.id;
-              }
-            }
-          });
-          setMainIndicators(newMainIndicators);
-          setSubIndicators(newSubIndicators);
-        }, 500);
-      }
     };
 
     // if (chartsession()?.chart) {
@@ -538,5 +627,7 @@ export const useChartState = () => {
     pushMainIndicator,
     pushSubIndicator,
     restoreChartState,
+    restoreIndicators,
+    setIndicatorVisible,
   };
 };

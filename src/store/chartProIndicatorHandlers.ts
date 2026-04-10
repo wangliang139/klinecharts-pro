@@ -30,7 +30,15 @@ type CreateHandlersOptions = {
   setSubIndicators: (next: SubIndicatorMap) => void;
   indicatorSettingModalParams: () => IndicatorSettingParams;
   setIndicatorSettingModalParams: (next: IndicatorSettingParams) => void;
-  createIndicator: (chart: ProChart, indicatorName: string, isStack?: boolean, paneOptions?: { id: string }) => string | null | undefined;
+  createIndicator: (
+    chart: ProChart,
+    indicatorName: string,
+    isStack?: boolean,
+    paneOptions?: { id: string },
+  ) => string | null | undefined;
+  popIndicator: (name: string, paneId?: string, id?: string) => boolean;
+  setIndicatorVisible: (name: string, paneId: string, visible: boolean, id?: string) => void;
+  modifyIndicator: (modalParams: IndicatorSettingParams, params: Array<number>) => void;
 };
 
 export const DEFAULT_INDICATOR_SETTING_PARAMS: IndicatorSettingParams = {
@@ -47,10 +55,10 @@ export function createChartIndicatorHandlers(options: CreateHandlersOptions) {
     if (!api) return;
     switch (payload.feature.id) {
       case "visible":
-        api.overrideIndicator({ name: payload.indicator.name, visible: true, paneId: payload.paneId });
+        options.setIndicatorVisible(payload.indicator.name, payload.paneId, true, payload.indicator.id);
         break;
       case "invisible":
-        api.overrideIndicator({ name: payload.indicator.name, visible: false, paneId: payload.paneId });
+        options.setIndicatorVisible(payload.indicator.name, payload.paneId, false, payload.indicator.id);
         break;
       case "setting": {
         const indicator = api
@@ -68,12 +76,14 @@ export function createChartIndicatorHandlers(options: CreateHandlersOptions) {
       case "close": {
         if (payload.paneId === "candle_pane") {
           const nextMainIndicators = [...options.mainIndicators()];
-          api.removeIndicator({ paneId: payload.paneId, name: payload.indicator.name, id: payload.indicator.id });
+          const removed = options.popIndicator(payload.indicator.name, payload.paneId, payload.indicator.id);
+          if (!removed) break;
           nextMainIndicators.splice(nextMainIndicators.indexOf(payload.indicator.name), 1);
           options.setMainIndicators(nextMainIndicators);
         } else {
           const nextSubIndicators = { ...options.subIndicators() };
-          api.removeIndicator({ paneId: payload.paneId, name: payload.indicator.name, id: payload.indicator.id });
+          const removed = options.popIndicator(payload.indicator.name, payload.paneId, payload.indicator.id);
+          if (!removed) break;
           delete nextSubIndicators[payload.indicator.name];
           options.setSubIndicators(nextSubIndicators);
         }
@@ -92,7 +102,8 @@ export function createChartIndicatorHandlers(options: CreateHandlersOptions) {
       options.createIndicator(api, data.name, true, { id: "candle_pane" });
       nextMainIndicators.push(data.name);
     } else {
-      api.removeIndicator({ name: data.name, paneId: "candle_pane", id: data.id ?? undefined });
+      const removed = options.popIndicator(data.name, "candle_pane");
+      if (!removed) return;
       nextMainIndicators.splice(nextMainIndicators.indexOf(data.name), 1);
     }
     options.setMainIndicators(nextMainIndicators);
@@ -108,7 +119,8 @@ export function createChartIndicatorHandlers(options: CreateHandlersOptions) {
         nextSubIndicators[data.name] = id;
       }
     } else if (data.id) {
-      api.removeIndicator({ name: data.name, id: data.id });
+      const removed = options.popIndicator(data.name, undefined, data.id);
+      if (!removed) return;
       delete nextSubIndicators[data.name];
     }
     options.setSubIndicators(nextSubIndicators);
@@ -118,7 +130,7 @@ export function createChartIndicatorHandlers(options: CreateHandlersOptions) {
     const api = options.getApi();
     if (!api) return;
     const modalParams = options.indicatorSettingModalParams();
-    api.overrideIndicator({ name: modalParams.indicatorName, calcParams: params, paneId: modalParams.paneId });
+    options.modifyIndicator(modalParams, params);
   };
 
   return {

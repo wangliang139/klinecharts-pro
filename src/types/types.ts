@@ -18,11 +18,9 @@ import {
   DeepPartial,
   Period as DefaultPeriod,
   FigureCreate,
-  IndicatorCreate,
   KLineData,
   Nullable,
-  Overlay,
-  PaneOptions,
+  Overlay
 } from "klinecharts";
 import { PaneProperties } from "../store/chartStore";
 import { ProOverlayCreate } from "./overlayTypes";
@@ -74,10 +72,11 @@ export interface ProChart extends Chart {
   getOverlayById(id: string): Nullable<Overlay>;
 }
 
-type IndicatorsType = {
-  value?: IndicatorCreate;
-  isStack?: boolean;
-  paneOptions?: PaneOptions;
+export type IndicatorsType = {
+  name: string;
+  visible: boolean;
+  calcParams: Array<number>;
+  isMainPane: boolean;
 };
 
 type OverlaysType = {
