@@ -1,8 +1,10 @@
 import { Component, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 
+import i18n from "../../i18n";
 import type { HisOrder } from "../../types/types";
 
 export interface HisOrderHoverProps {
+  locale: string;
   order: HisOrder;
   formattedTime: string;
   anchorX?: number | null;
@@ -200,14 +202,14 @@ const HisOrderHover: Component<HisOrderHoverProps> = (props) => {
       style={{ left: `${layout().left}px`, top: `${layout().top}px` }}
     >
       <div class={`klinecharts-pro-his-order-hover-title ${isBuy() ? "is-buy" : "is-sell"}`}>
-        {isBuy() ? "买入" : "卖出"}
+        {isBuy() ? i18n("trade_buy", props.locale) : i18n("trade_sell", props.locale)}
       </div>
-      <div style={rowStyle}><strong>订单ID：</strong><span style={valueStyle}>{String(props.order.orderId ?? props.order.id ?? "-")}</span></div>
-      <div style={rowStyle}><strong>价格：</strong><span style={valueStyle}>{String(props.order.price)}</span></div>
-      <div style={rowStyle}><strong>数量：</strong><span style={valueStyle}>{String(props.order.size)}</span></div>
-      <div style={rowStyle}><strong>手续费：</strong><span style={valueStyle}>{String(props.order.fee ?? "-")}</span></div>
-      <div style={rowStyle}><strong>已实现盈亏：</strong><span style={valueStyle}>{String(props.order.pnl ?? "-")}</span></div>
-      <div style={rowStyle}><strong>成交时间：</strong><span style={valueStyle}>{props.formattedTime}</span></div>
+      <div style={rowStyle}><strong>{i18n("order_id", props.locale)}:</strong><span style={valueStyle}>{String(props.order.orderId ?? props.order.id ?? "-")}</span></div>
+      <div style={rowStyle}><strong>{i18n("order_price", props.locale)}:</strong><span style={valueStyle}>{String(props.order.price)}</span></div>
+      <div style={rowStyle}><strong>{i18n("order_quantity", props.locale)}:</strong><span style={valueStyle}>{String(props.order.size)}</span></div>
+      <div style={rowStyle}><strong>{i18n("order_fee", props.locale)}:</strong><span style={valueStyle}>{String(props.order.fee ?? "-")}</span></div>
+      <div style={rowStyle}><strong>{i18n("order_realized_pnl", props.locale)}:</strong><span style={valueStyle}>{String(props.order.pnl ?? "-")}</span></div>
+      <div style={rowStyle}><strong>{i18n("order_filled_time", props.locale)}:</strong><span style={valueStyle}>{props.formattedTime}</span></div>
     </div>
   );
 };

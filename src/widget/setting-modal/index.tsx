@@ -25,7 +25,7 @@ import { ChartObjType } from '../../types'
 import { getOptions } from './data'
 // import { chartsession, chartsessionCtr } from '../../ChartProComponent'
 import { setChartModified } from '../../store/chartStore'
-import { loadTradingConfigFromStorage, setTradingConfigState } from '../../store/tradingStore'
+import { loadTradingConfigFromStorage, resetTradingConfigState, setTradingConfigState } from '../../store/tradingStore'
 
 export interface SettingModalProps {
   locale: string
@@ -91,19 +91,22 @@ const SettingModal: Component<SettingModalProps> = props => {
       
       localStorage.setItem(`chartstatedata`, JSON.stringify(chartObj))
     }
+    resetTradingConfigState()
+    setStyles(props.currentStyles)
+    setOptions(getOptions(props.locale))
+    setTradingUi(loadTradingConfigFromStorage())
     props.onRestoreDefault(options())
-    props.onClose()
   }
 
   const settingsButton = [
     { text: i18n('setting_sidebar_chart', props.locale), key: 'trading' },
-    { text: 'Candle', key: 'candle' },
-    { text: 'Indicator', key: 'indicator' },
-    { text: 'Grid', key: 'grid' },
-    { text: 'X-Axis', key: 'xAxis' },
-    { text: 'Y-Axis', key: 'yAxis' },
-    { text: 'Separator', key: 'separator' },
-    { text: 'Crosshair', key: 'crosshair' },
+    { text: i18n('setting_sidebar_candle', props.locale), key: 'candle' },
+    { text: i18n('setting_sidebar_indicator', props.locale), key: 'indicator' },
+    { text: i18n('setting_sidebar_grid', props.locale), key: 'grid' },
+    { text: i18n('setting_sidebar_x_axis', props.locale), key: 'xAxis' },
+    { text: i18n('setting_sidebar_y_axis', props.locale), key: 'yAxis' },
+    { text: i18n('setting_sidebar_separator', props.locale), key: 'separator' },
+    { text: i18n('setting_sidebar_crosshair', props.locale), key: 'crosshair' },
   ]
 
   return (

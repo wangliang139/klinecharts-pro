@@ -50,6 +50,7 @@ import {
 import AlertModal from './widget/alert-modal'
 import { AlertDetailFields } from './widget/alert-modal/alert-detail-fields'
 
+import i18n from './i18n'
 import { translateTimezone } from './widget/timezone-modal/data'
 
 import Chart from './Chart'
@@ -585,6 +586,14 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   })
 
   createEffect(() => {
+    const current = timezone()
+    const text = translateTimezone(current.key, locale())
+    if (current.text !== text) {
+      setTimezone({ ...current, text })
+    }
+  })
+
+  createEffect(() => {
     instanceApi()?.setTimezone(timezone().key)
   })
 
@@ -628,14 +637,14 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
       <i class="icon-close klinecharts-pro-load-icon" />
       <Show when={symbolSearchModalVisible()}>
         <SymbolSearchModal
-          locale={props.locale}
+          locale={locale()}
           datafeed={props.dataloader}
           onSymbolSelected={symbol => { setSymbol(symbol) }}
           onClose={() => { setSymbolSearchModalVisible(false) }} />
       </Show>
       <Show when={indicatorModalVisible()}>
         <IndicatorModal
-          locale={props.locale}
+          locale={locale()}
           mainIndicators={mainIndicators()}
           subIndicators={subIndicators()}
           onClose={() => { setIndicatorModalVisible(false) }}
@@ -644,7 +653,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
       </Show>
       <Show when={timezoneModalVisible()}>
         <TimezoneModal
-          locale={props.locale}
+          locale={locale()}
           timezone={timezone()}
           onClose={() => { setTimezoneModalVisible(false) }}
           onConfirm={setTimezone}
@@ -652,6 +661,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
       </Show>
       <Show when={alertModalVisible()}>
         <AlertModal
+          locale={locale()}
           alerts={alerts()}
           onClose={() => { setAlertModalVisible(false) }}
           onAddAlert={props.onAddAlert}
@@ -661,20 +671,20 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
       <Show when={chartAlertDetail()}>
         {(w) => (
           <Modal
-            title="预警详情"
+            title={i18n('alert_detail', locale())}
             width={400}
             height={260}
             onClose={() => { setChartAlertDetail(null) }}
           >
             <div class="klinecharts-pro-alert-detail">
-              <AlertDetailFields alert={w()} />
+              <AlertDetailFields locale={locale()} alert={w()} />
             </div>
           </Modal>
         )}
       </Show>
       <Show when={settingModalVisible()}>
         <SettingModal
-          locale={props.locale}
+          locale={locale()}
           currentStyles={utils.clone(instanceApi()!.getStyles())}
           onClose={() => { setSettingModalVisible(false) }}
           onChange={style => {
@@ -692,14 +702,14 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
       </Show>
       <Show when={screenshotUrl().length > 0}>
         <ScreenshotModal
-          locale={props.locale}
+          locale={locale()}
           url={screenshotUrl()}
           onClose={() => { setScreenshotUrl('') }}
         />
       </Show>
       <Show when={indicatorSettingModalParams().visible}>
         <IndicatorSettingModal
-          locale={props.locale}
+          locale={locale()}
           params={indicatorSettingModalParams()}
           onClose={() => { setIndicatorSettingModalParams(DEFAULT_INDICATOR_SETTING_PARAMS) }}
           onConfirm={indicatorHandlers.onIndicatorSettingConfirm}
@@ -707,8 +717,9 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
       </Show>
       <Show when={hisOrderHoverVisible() && !!hisOrderHoverData()}>
         <HisOrderHover
+          locale={locale()}
           order={hisOrderHoverData()!}
-          formattedTime={formatTimeByTz(hisOrderHoverData()!.timestamp, props.locale, timezone().key)}
+          formattedTime={formatTimeByTz(hisOrderHoverData()!.timestamp, locale(), timezone().key)}
           anchorX={hisOrderHoverAnchor().x}
           anchorY={hisOrderHoverAnchor().y}
           clipElement={
@@ -719,7 +730,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
         />
       </Show>
       <PeriodBar
-        locale={props.locale}
+        locale={locale()}
         symbol={symbol()!}
         spread={drawingBarVisible()}
         period={period()!}
@@ -749,7 +760,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
         </Show>
         <Show when={drawingBarVisible()}>
           <DrawingBar
-            locale={props.locale}
+            locale={locale()}
             onDrawingItemClick={(overlay) => {
               pushOverlay(overlay, 'candle_pane')
             }}

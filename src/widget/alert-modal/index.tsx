@@ -1,23 +1,18 @@
 import { Component, createSignal, For, Show } from 'solid-js'
 
 import { Modal } from '../../component'
+import i18n from '../../i18n'
+import { getAlertSummaryText } from '../../i18n/trading'
 import { AlertItem, AlertItemInput } from '../../types/types'
 import AlertAddModal from '../alert-add-modal'
 import { AlertDetailFields } from './alert-detail-fields'
 
 export interface AlertModalProps {
+  locale: string
   alerts: AlertItem[]
   onClose: () => void
   onAddAlert?: (alert: AlertItemInput) => boolean | Promise<boolean>
   onRemoveAlert?: (alert: AlertItem) => boolean | Promise<boolean>
-}
-
-function summaryLine(alertItem: AlertItem): string {
-  if (alertItem.type === 'price_reach') return `价格达到 ${alertItem.price ?? '--'}`
-  if (alertItem.type === 'price_rise_to') return `价格上涨至 ${alertItem.price ?? '--'}`
-  if (alertItem.type === 'price_fall_to') return `价格下跌至 ${alertItem.price ?? '--'}`
-  if (alertItem.type === 'price_rise_pct_over') return `价格${alertItem.window ?? '5m'}涨幅 ${alertItem.percent ?? '--'}%`
-  return `价格${alertItem.window ?? '5m'}跌幅 ${alertItem.percent ?? '--'}%`
 }
 
 const AlertModal: Component<AlertModalProps> = (props) => {
@@ -26,7 +21,7 @@ const AlertModal: Component<AlertModalProps> = (props) => {
 
   return (
     <Modal
-      title="预警"
+      title={i18n('alerts', props.locale)}
       width={480}
       onClose={props.onClose}
     >
@@ -37,10 +32,10 @@ const AlertModal: Component<AlertModalProps> = (props) => {
               <div
                 class="alert-item"
                 onDblClick={() => { setDetail(alertItem) }}
-                title="双击查看详情"
+                title={i18n('alert_double_click_detail', props.locale)}
               >
                 <span class="alert-text">
-                  {summaryLine(alertItem)}
+                  {getAlertSummaryText(alertItem, props.locale)}
                 </span>
                 <button
                   type="button"
@@ -48,13 +43,13 @@ const AlertModal: Component<AlertModalProps> = (props) => {
                   onClick={async () => { await props.onRemoveAlert?.(alertItem) }}
                   onDblClick={(e) => { e.stopPropagation() }}
                 >
-                  删除
+                  {i18n('alert_delete', props.locale)}
                 </button>
               </div>
             )}
           </For>
           <Show when={props.alerts.length === 0}>
-            <div class="alert-empty">暂无预警</div>
+            <div class="alert-empty">{i18n('alert_empty', props.locale)}</div>
           </Show>
         </div>
         <div class="alert-add-btn-container">
@@ -63,12 +58,13 @@ const AlertModal: Component<AlertModalProps> = (props) => {
             class="alert-add-btn"
             onClick={() => { setAddVisible(true) }}
           >
-            添加
+            {i18n('alert_add', props.locale)}
           </button>
         </div>
       </div>
       <Show when={addVisible()}>
         <AlertAddModal
+          locale={props.locale}
           onClose={() => { setAddVisible(false) }}
           onSubmit={async (payload) => {
             return (await props.onAddAlert?.(payload)) ?? true
@@ -78,13 +74,13 @@ const AlertModal: Component<AlertModalProps> = (props) => {
       <Show when={detail()}>
         {(w) => (
           <Modal
-            title="预警详情"
+            title={i18n('alert_detail', props.locale)}
             width={400}
             height={260}
             onClose={() => { setDetail(null) }}
           >
             <div class="klinecharts-pro-alert-detail">
-              <AlertDetailFields alert={w()} />
+              <AlertDetailFields locale={props.locale} alert={w()} />
             </div>
           </Modal>
         )}

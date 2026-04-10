@@ -1,11 +1,11 @@
 import { Coordinate, DomPosition, LineStyle, Nullable, OverlayEvent, OverlayTemplate, utils } from "klinecharts";
 
 import {
-  formatWesternGrouped,
   getKlineProCssVariable,
   KLINE_PRO_FALLBACK_PRICE_ALERT_LINE,
   KLINE_PRO_VAR_PRICE_ALERT_LINE,
 } from "../../helpers";
+import { getAlertLineLabelText } from "../../i18n/trading";
 import { AlertItem } from "../../types/types";
 import { ALERT_DETAIL_OPEN_EVENT } from "./constants";
 import { isPriceInVisibleCandleRange } from "./chartVisibleRange";
@@ -75,16 +75,6 @@ const alertLineStyle = (color: string): LineStyle => ({
   dashedValue: [4, 4],
 });
 
-function getAlertLineLabelText(alertItem: AlertItem, precision = 2): string {
-  const p = Number(alertItem.price ?? 0);
-  const pv = Number.isFinite(p) ? p : 0;
-  if (alertItem.type === "price_reach") return `价格达到 ${formatWesternGrouped(pv, precision)}`;
-  if (alertItem.type === "price_rise_to") return `价格涨到 ${formatWesternGrouped(pv, precision)}`;
-  if (alertItem.type === "price_fall_to") return `价格跌到 ${formatWesternGrouped(pv, precision)}`;
-  if (alertItem.type === "price_rise_pct_over") return `价格${alertItem.window ?? "5m"}涨幅 ${alertItem.percent ?? 0}%`;
-  return `价格${alertItem.window ?? "5m"}跌幅 ${alertItem.percent ?? 0}%`;
-}
-
 const priceAlertLine = (): OverlayTemplate => ({
   name: "priceAlertLine",
   mode: "normal",
@@ -108,7 +98,7 @@ const priceAlertLine = (): OverlayTemplate => ({
       (chart.convertToPixel({ timestamp: last.timestamp, value: price }) as Partial<Coordinate>).y ?? coordinates[0].y;
     const accentColor = getKlineProCssVariable(chart, KLINE_PRO_VAR_PRICE_ALERT_LINE, KLINE_PRO_FALLBACK_PRICE_ALERT_LINE);
     const precision = chart.getSymbol()?.pricePrecision ?? 2;
-    const text = getAlertLineLabelText(alertItem, precision);
+    const text = getAlertLineLabelText(alertItem, chart.getLocale?.() ?? "zh-CN", precision);
     const textW = utils.calcTextWidth(text);
     /** 等腰三角：底边在左，顶点贴齐主图画布右缘 */
     const triangleTipX = bounding.width;

@@ -11,7 +11,7 @@ export const DEFAULT_TRADING_DISPLAY: TradingConfig = {
   showLiquidation: false,
   showOpenOrders: false,
   showHisOrders: false,
-  showPriceAlerts: true,
+  showPriceAlerts: false,
 };
 
 const TRADING_OVERLAY_GROUP = "trading-display";
@@ -180,6 +180,10 @@ export function setTradingConfigState(next: TradingConfig, chart?: Chart | null)
   syncTradingOverlays(chart);
 }
 
+export function resetTradingConfigState(chart?: Chart | null): void {
+  setTradingConfigState({ ...DEFAULT_TRADING_DISPLAY }, chart);
+}
+
 export function setPositionsData(list: Position[], chart?: Chart | null): void {
   const scope = resolveScope(chart);
   scope.positionsState = list.slice();
@@ -189,9 +193,6 @@ export function setPositionsData(list: Position[], chart?: Chart | null): void {
 export function setLiquidationPriceData(price: number | null, chart?: Chart | null): void {
   const scope = resolveScope(chart);
   scope.liquidationPriceState = price;
-  if (price != null && Number.isFinite(price)) {
-    persistTradingConfig({ ...scope.tradingConfig, showLiquidation: true }, chart);
-  }
   syncTradingOverlays(chart);
 }
 

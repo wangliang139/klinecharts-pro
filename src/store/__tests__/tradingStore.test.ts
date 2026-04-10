@@ -18,7 +18,7 @@ describe("tradingStore helpers", () => {
       showLiquidation: false,
       showOpenOrders: false,
       showHisOrders: false,
-      showPriceAlerts: true,
+      showPriceAlerts: false,
     });
   });
 

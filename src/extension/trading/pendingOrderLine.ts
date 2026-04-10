@@ -5,6 +5,7 @@
 import { Coordinate, LineStyle, OverlayEvent, OverlayTemplate, TextStyle, utils } from "klinecharts";
 
 import { formatWesternGrouped, getPrecision } from "../../helpers";
+import i18n from "../../i18n";
 import { isPriceInVisibleCandleRange } from "./chartVisibleRange";
 
 const LONG_SIDE_COLOR = "#2ebd85";
@@ -108,8 +109,8 @@ const pendingOrderLine = (): OverlayTemplate => ({
     const pricePrecision = symbol?.pricePrecision ?? 2;
     const volumePrecision = symbol?.volumePrecision ?? 4;
 
-    // const priceStr = formatWesternGrouped(price, pricePrecision);
-    const priceStr = "限价";
+    const locale = chart.getLocale?.() ?? "zh-CN";
+    const priceStr = i18n("order_limit", locale);
     const sizeStr = formatWesternGrouped(ext.size, volumePrecision);
 
     const lineColor = buySellToLineColor(ext.isBuy);

@@ -137,7 +137,7 @@ chart = new KLineChartPro({
   ],
   datafeed,
   theme: "light",
-  locale: "en-US",
+  locale: "zh-CN",
   drawingBarVisible: false,
   alerts: alertState,
   onAddAlert: async (payload) => {

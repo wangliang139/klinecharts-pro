@@ -1,9 +1,12 @@
 import { Component, createMemo, createSignal, Show } from 'solid-js'
 
 import { Modal, Select, SelectDataSourceItem } from '../../component'
+import i18n from '../../i18n'
+import { getAlertFrequencyText, getAlertTypeText, getAlertWindowText } from '../../i18n/trading'
 import { AlertFrequency, AlertItemInput, AlertType, AlertWindow } from '../../types/types'
 
 export interface AlertAddModalProps {
+  locale: string
   onClose: () => void
   onSubmit: (payload: AlertItemInput) => boolean | Promise<boolean>
 }
@@ -16,26 +19,6 @@ type FormState = {
   percent: string
   remark: string
 }
-
-const TYPE_OPTIONS: Array<SelectDataSourceItem & { key: AlertType }> = [
-  { key: 'price_reach', text: '价格达到' },
-  { key: 'price_rise_to', text: '价格上涨至' },
-  { key: 'price_fall_to', text: '价格下跌至' },
-  { key: 'price_rise_pct_over', text: '价格涨幅超过' },
-  { key: 'price_fall_pct_over', text: '价格跌幅超过' },
-]
-
-const FREQUENCY_OPTIONS: Array<SelectDataSourceItem & { key: AlertFrequency }> = [
-  { key: 'repeat', text: '重复提醒' },
-  { key: 'once', text: '仅提醒一次' },
-]
-
-const WINDOW_OPTIONS: Array<SelectDataSourceItem & { key: AlertWindow }> = [
-  { key: '5m', text: '5分' },
-  { key: '1h', text: '1小时' },
-  { key: '4h', text: '4小时' },
-  { key: '24h', text: '24小时' },
-]
 
 const AlertAddModal: Component<AlertAddModalProps> = (props) => {
   const [submitting, setSubmitting] = createSignal(false)
@@ -54,6 +37,26 @@ const AlertAddModal: Component<AlertAddModalProps> = (props) => {
     return t === 'price_reach' || t === 'price_rise_to' || t === 'price_fall_to'
   })
 
+  const typeOptions = createMemo<Array<SelectDataSourceItem & { key: AlertType }>>(() => [
+    { key: 'price_reach', text: getAlertTypeText('price_reach', props.locale) },
+    { key: 'price_rise_to', text: getAlertTypeText('price_rise_to', props.locale) },
+    { key: 'price_fall_to', text: getAlertTypeText('price_fall_to', props.locale) },
+    { key: 'price_rise_pct_over', text: getAlertTypeText('price_rise_pct_over', props.locale) },
+    { key: 'price_fall_pct_over', text: getAlertTypeText('price_fall_pct_over', props.locale) },
+  ])
+
+  const frequencyOptions = createMemo<Array<SelectDataSourceItem & { key: AlertFrequency }>>(() => [
+    { key: 'repeat', text: getAlertFrequencyText('repeat', props.locale) },
+    { key: 'once', text: getAlertFrequencyText('once', props.locale) },
+  ])
+
+  const windowOptions = createMemo<Array<SelectDataSourceItem & { key: AlertWindow }>>(() => [
+    { key: '5m', text: getAlertWindowText('5m', props.locale) },
+    { key: '1h', text: getAlertWindowText('1h', props.locale) },
+    { key: '4h', text: getAlertWindowText('4h', props.locale) },
+    { key: '24h', text: getAlertWindowText('24h', props.locale) },
+  ])
+
   const submit = async () => {
     if (submitting()) return
     const value = form()
@@ -65,14 +68,14 @@ const AlertAddModal: Component<AlertAddModalProps> = (props) => {
     if (isPriceType()) {
       const price = Number(value.price)
       if (!Number.isFinite(price) || price <= 0) {
-        setError('请输入大于 0 的价格')
+        setError(i18n('alert_validation_price_gt_zero', props.locale))
         return
       }
       payload.price = price
     } else {
       const percent = Number(value.percent)
       if (!Number.isInteger(percent) || percent < 1 || percent > 100) {
-        setError('百分比需为 1-100 的整数')
+        setError(i18n('alert_validation_percent_range', props.locale))
         return
       }
       payload.window = value.window
@@ -92,21 +95,21 @@ const AlertAddModal: Component<AlertAddModalProps> = (props) => {
 
   return (
     <Modal
-      title="添加预警"
+      title={i18n('alert_add', props.locale)}
       width={360}
       buttons={[
-        { children: '取消', type: 'cancel', onClick: props.onClose },
-        { children: submitting() ? '提交中...' : '提交', onClick: submit },
+        { children: i18n('cancel', props.locale), type: 'cancel', onClick: props.onClose },
+        { children: submitting() ? i18n('alert_submitting', props.locale) : i18n('alert_submit', props.locale), onClick: submit },
       ]}
       onClose={props.onClose}
     >
       <div class="klinecharts-pro-alert-add-modal">
         <div class="row">
-          <span>类型</span>
+          <span>{i18n('alert_field_type', props.locale)}</span>
           <Select
             style={{ width: '220px' }}
-            value={TYPE_OPTIONS.find(item => item.key === form().type)?.text}
-            dataSource={TYPE_OPTIONS}
+            value={typeOptions().find(item => item.key === form().type)?.text}
+            dataSource={typeOptions()}
             onSelected={item => {
               const next = (item as SelectDataSourceItem).key as AlertType
               setForm(prev => ({ ...prev, type: next }))
@@ -115,7 +118,7 @@ const AlertAddModal: Component<AlertAddModalProps> = (props) => {
         </div>
         <Show when={isPriceType()}>
           <div class="row">
-            <span>价格</span>
+            <span>{i18n('alert_field_price', props.locale)}</span>
             <input
               class="field-input"
               type="number"
@@ -131,11 +134,11 @@ const AlertAddModal: Component<AlertAddModalProps> = (props) => {
         <Show when={!isPriceType()}>
           <>
             <div class="row">
-              <span>分钟</span>
+              <span>{i18n('alert_field_window', props.locale)}</span>
               <Select
                 style={{ width: '220px' }}
-                value={WINDOW_OPTIONS.find(item => item.key === form().window)?.text}
-                dataSource={WINDOW_OPTIONS}
+                value={windowOptions().find(item => item.key === form().window)?.text}
+                dataSource={windowOptions()}
                 onSelected={item => {
                   const next = (item as SelectDataSourceItem).key as AlertWindow
                   setForm(prev => ({ ...prev, window: next }))
@@ -143,7 +146,7 @@ const AlertAddModal: Component<AlertAddModalProps> = (props) => {
               />
             </div>
             <div class="row">
-              <span>百分比</span>
+              <span>{i18n('alert_field_percent', props.locale)}</span>
               <input
                 class="field-input"
                 type="number"
@@ -159,11 +162,11 @@ const AlertAddModal: Component<AlertAddModalProps> = (props) => {
           </>
         </Show>
         <div class="row">
-          <span>频率</span>
+          <span>{i18n('alert_field_frequency', props.locale)}</span>
           <Select
             style={{ width: '220px' }}
-            value={FREQUENCY_OPTIONS.find(item => item.key === form().frequency)?.text}
-            dataSource={FREQUENCY_OPTIONS}
+            value={frequencyOptions().find(item => item.key === form().frequency)?.text}
+            dataSource={frequencyOptions()}
             onSelected={item => {
               const next = (item as SelectDataSourceItem).key as AlertFrequency
               setForm(prev => ({ ...prev, frequency: next }))
@@ -171,7 +174,7 @@ const AlertAddModal: Component<AlertAddModalProps> = (props) => {
           />
         </div>
         <div class="row">
-          <span>备注</span>
+          <span>{i18n('alert_field_remark', props.locale)}</span>
           <input
             class="field-input"
             type="text"
@@ -179,7 +182,7 @@ const AlertAddModal: Component<AlertAddModalProps> = (props) => {
             onInput={(event) => {
               setForm(prev => ({ ...prev, remark: (event.target as HTMLInputElement).value }))
             }}
-            placeholder="可选"
+            placeholder={i18n('alert_optional', props.locale)}
           />
         </div>
         <Show when={!!error()}>
