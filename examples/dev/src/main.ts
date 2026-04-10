@@ -121,8 +121,8 @@ chart = new KLineChartPro({
     shortName: "BTC/USDT:FUTURE",
     market: "binance",
     exchange: "binance",
-    pricePrecision: 4,
-    volumePrecision: 4,
+    pricePrecision: 2,
+    volumePrecision: 2,
     priceCurrency: "USDT",
     type: "crypto",
   },
@@ -141,7 +141,6 @@ chart = new KLineChartPro({
   drawingBarVisible: false,
   alerts: alertState,
   onAddAlert: async (payload) => {
-    return false;
     const alertItem = normalizeAlert(payload);
     alertState = [...alertState, alertItem];
     chart.setAlerts(alertState);

@@ -72,13 +72,14 @@ import { createHisOrderHoverController, createResyncScheduler } from './store/tr
 import {
   bindTradingStore,
   loadTradingConfigFromStorage,
+  setAlertsData,
   setHisOrdersData,
   setLiquidationPriceData,
   setOpenOrdersData,
   setPositionsData,
   syncTradingOverlays
 } from './store/tradingStore'
-import { AlertItem, AlertType, HisOrder, PendingOrder, Period, Position, ProChart, SymbolInfo } from './types/types'
+import { AlertItem, HisOrder, PendingOrder, Period, Position, ProChart, SymbolInfo } from './types/types'
 const { createIndicator, pushOverlay, restoreChartState } = useChartState()
 
 interface PrevSymbolPeriod {
@@ -87,31 +88,6 @@ interface PrevSymbolPeriod {
 }
 const TRADING_RESYNC_DELAYS = [0, 120, 360, 900] as const
 const HIS_ORDER_HOVER_HIDE_DELAY = 120
-const ALERT_OVERLAY_GROUP = 'alert_overlays'
-const ALERT_PRICE_TYPES: AlertType[] = ['price_reach', 'price_rise_to', 'price_fall_to']
-
-/** JSON / 外部接口常把 price 写成字符串；列表 UI 仍能展示，但原先 Number.isFinite 会失败导致不同步 overlay */
-function resolvedAlertPriceValue(alertItem: AlertItem): number | null {
-  const p = alertItem.price as unknown
-  if (p == null) return null
-  if (typeof p === 'number' && Number.isFinite(p)) return p
-  if (typeof p === 'string' && p.trim() !== '') {
-    const n = Number(p.trim().replace(/,/g, ''))
-    return Number.isFinite(n) ? n : null
-  }
-  return null
-}
-
-function alertSymbolMatchesChartSymbol(alertItem: AlertItem, chartSymbol: SymbolInfo): boolean {
-  const raw = alertItem.symbol?.trim()
-  if (!raw) return true
-  if (raw === chartSymbol.ticker) return true
-  const name = chartSymbol.name?.trim()
-  if (name && raw === name) return true
-  const shortName = chartSymbol.shortName?.trim()
-  if (shortName && raw === shortName) return true
-  return false
-}
 
 function buildTooltipFeatureStyles(color: string) {
   return {
@@ -254,56 +230,6 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   let lastExternalStyles: ReturnType<typeof styles>
 
   const [indicatorSettingModalParams, setIndicatorSettingModalParams] = createSignal<IndicatorSettingParams>(DEFAULT_INDICATOR_SETTING_PARAMS)
-  const safeOverlaySegment = (key: string) => key.replace(/[^a-zA-Z0-9_-]/g, '_')
-
-  const syncAlertOverlays = () => {
-    const api = chartApiRef
-    const currentSymbol = symbol()
-    if (!api || !currentSymbol) return
-    const lastTs = api.getDataList().at(-1)?.timestamp ?? Date.now()
-    const currentAlerts = alerts()
-    const priceAlerts: Array<{ alertItem: AlertItem; price: number }> = []
-    for (let i = 0; i < currentAlerts.length; i++) {
-      const alertItem = currentAlerts[i]!
-      if (!ALERT_PRICE_TYPES.includes(alertItem.type)) continue
-      const price = resolvedAlertPriceValue(alertItem)
-      if (price == null) continue
-      if (!alertSymbolMatchesChartSymbol(alertItem, currentSymbol)) continue
-      priceAlerts.push({ alertItem, price })
-    }
-    const aliveIds = new Set<string>()
-    priceAlerts.forEach(({ alertItem, price }, index) => {
-      const idSuffix = safeOverlaySegment(alertItem.id || `idx_${index}`)
-      const id = `alert-${idSuffix}`
-      aliveIds.add(id)
-      const existing = (api.getOverlays({ id }) ?? []).length > 0
-      const alertForOverlay: AlertItem = { ...alertItem, price }
-      const payload = {
-        id,
-        name: 'priceAlertLine',
-        groupId: ALERT_OVERLAY_GROUP,
-        paneId: 'candle_pane' as const,
-        mode: 'normal' as const,
-        points: [{ timestamp: lastTs, value: price }],
-        extendData: { alert: alertForOverlay, showInfo: false },
-      }
-      if (!existing) {
-        api.createOverlay(payload)
-      } else {
-        api.overrideOverlay({
-          id,
-          points: payload.points,
-          extendData: payload.extendData,
-        })
-      }
-    })
-    const existing = api.getOverlays({ groupId: ALERT_OVERLAY_GROUP }) ?? []
-    existing.forEach((item) => {
-      if (item.id && !aliveIds.has(item.id)) {
-        api.removeOverlay({ id: item.id })
-      }
-    })
-  }
 
   const handleRemoveAlert = async (alertItem: AlertItem) => {
     return (await props.onRemoveAlert?.(alertItem)) ?? true
@@ -383,7 +309,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
     }
   }
   const onHisOrderHover = (evt: Event) => {
-    const detail = (evt as CustomEvent<{visible: boolean, sourceContainer?: HTMLElement | null }>).detail
+    const detail = (evt as CustomEvent<{ visible: boolean, sourceContainer?: HTMLElement | null }>).detail
     const sourceContainer = detail?.sourceContainer ?? null
     const currentContainer = (widgetRef as HTMLElement | undefined)?.closest('.klinecharts-pro') as HTMLElement | null
     if (!currentContainer) {
@@ -444,7 +370,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
     setHisOrders: (list: HisOrder[]) => { setHisOrdersData(list, instanceApi()) },
     setAlerts: (list: AlertItem[]) => {
       setAlerts([...list])
-      syncAlertOverlays()
+      setAlertsData(list, instanceApi())
     },
   }
 
@@ -553,8 +479,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
       restoreChartState(props.overrides)
       bindTradingStore(chart)
       loadTradingConfigFromStorage(chart)
-      syncTradingOverlays(chart)
-      syncAlertOverlays()
+      setAlertsData(props.alerts ?? [], chart)
 
       const s = symbol()
       if (s?.priceCurrency) {
@@ -637,7 +562,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
         api?.resize()
       }
     }
-    syncAlertOverlays()
+    syncTradingOverlays(instanceApi())
 
     return { symbol: s, period: p }
   })
@@ -675,11 +600,6 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
     if (!nextStyles || lastExternalStyles === nextStyles) return
     lastExternalStyles = nextStyles
     api.setStyles(nextStyles)
-  })
-
-  createEffect(() => {
-    alerts()
-    syncAlertOverlays()
   })
 
   createEffect(() => {
@@ -791,8 +711,8 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
           anchorY={hisOrderHoverAnchor().y}
           clipElement={
             (widgetRef as HTMLDivElement | undefined)?.closest('.klinecharts-pro') as
-              | HTMLElement
-              | null
+            | HTMLElement
+            | null
           }
         />
       </Show>

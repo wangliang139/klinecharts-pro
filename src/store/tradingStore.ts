@@ -1,7 +1,7 @@
 import type { Chart } from "klinecharts";
 
-import type { HisOrder, PendingOrder, Position, TradingConfig } from "../types/types";
-import { instanceApi } from "./chartStore";
+import type { AlertItem, AlertType, HisOrder, PendingOrder, Position, SymbolInfo, TradingConfig } from "../types/types";
+import { instanceApi, symbol } from "./chartStore";
 
 export const CHART_STATE_STORAGE_KEY = "chartstatedata";
 
@@ -22,6 +22,7 @@ type TradingScopeState = {
   liquidationPriceState: number | null;
   openOrdersState: PendingOrder[];
   hisOrdersState: HisOrder[];
+  alertsState: AlertItem[];
   overlaySignatures: Map<string, string>;
 };
 
@@ -33,11 +34,35 @@ type ChartStateStorage = Record<string, unknown> & {
 
 type DesiredOverlay = {
   id: string;
-  name: "positionAvgLine" | "liquidationLine" | "pendingOrderLine" | "hisOrderMark";
+  name: "positionAvgLine" | "liquidationLine" | "pendingOrderLine" | "hisOrderMark" | "priceAlertLine";
   points: Array<{ timestamp: number; value: number }>;
   extendData: Record<string, unknown>;
   signature: string;
 };
+
+const ALERT_PRICE_TYPES: AlertType[] = ["price_reach", "price_rise_to", "price_fall_to"];
+
+function resolvedAlertPriceValue(alertItem: AlertItem): number | null {
+  const p = alertItem.price as unknown;
+  if (p == null) return null;
+  if (typeof p === "number" && Number.isFinite(p)) return p;
+  if (typeof p === "string" && p.trim() !== "") {
+    const n = Number(p.trim().replace(/,/g, ""));
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
+function alertSymbolMatchesChartSymbol(alertItem: AlertItem, chartSymbol: SymbolInfo): boolean {
+  const raw = alertItem.symbol?.trim();
+  if (!raw) return true;
+  if (raw === chartSymbol.ticker) return true;
+  const name = chartSymbol.name?.trim();
+  if (name && raw === name) return true;
+  const shortName = chartSymbol.shortName?.trim();
+  if (shortName && raw === shortName) return true;
+  return false;
+}
 
 const fallbackScopeState = createDefaultScopeState();
 const scopedState = new WeakMap<Chart, TradingScopeState>();
@@ -49,6 +74,7 @@ function createDefaultScopeState(): TradingScopeState {
     liquidationPriceState: null,
     openOrdersState: [],
     hisOrdersState: [],
+    alertsState: [],
     overlaySignatures: new Map<string, string>(),
   };
 }
@@ -171,6 +197,12 @@ export function setOpenOrdersData(list: PendingOrder[], chart?: Chart | null): v
   syncTradingOverlays(chart);
 }
 
+export function setAlertsData(list: AlertItem[], chart?: Chart | null): void {
+  const scope = resolveScope(chart);
+  scope.alertsState = list.slice();
+  syncTradingOverlays(chart);
+}
+
 export function setHisOrdersData(list: HisOrder[], chart?: Chart | null): void {
   const scope = resolveScope(chart);
   scope.hisOrdersState = list.slice();
@@ -219,6 +251,7 @@ function applyReadonlyOverlayHandlers(chart: Chart, id: string): void {
 
 function createOrUpdateOverlay(chart: Chart, payload: DesiredOverlay): string {
   const exists = (chart.getOverlays({ id: payload.id }) ?? []).length > 0;
+  const useReadonly = payload.name !== "priceAlertLine";
   if (!exists) {
     const createdId = chart.createOverlay({
       id: payload.id,
@@ -230,7 +263,7 @@ function createOrUpdateOverlay(chart: Chart, payload: DesiredOverlay): string {
       extendData: payload.extendData,
     }) as string | null | undefined;
     const actualId = createdId ?? payload.id;
-    applyReadonlyOverlayHandlers(chart, actualId);
+    if (useReadonly) applyReadonlyOverlayHandlers(chart, actualId);
     return actualId;
   }
   chart.overrideOverlay({
@@ -238,7 +271,7 @@ function createOrUpdateOverlay(chart: Chart, payload: DesiredOverlay): string {
     points: payload.points,
     extendData: payload.extendData,
   });
-  applyReadonlyOverlayHandlers(chart, payload.id);
+  if (useReadonly) applyReadonlyOverlayHandlers(chart, payload.id);
   return payload.id;
 }
 
@@ -253,6 +286,7 @@ function buildDesiredOverlays(
   scope: TradingScopeState,
   dataList: Array<{ timestamp: number; high?: number; low?: number }>,
   lastTs: number,
+  chartSymbol: SymbolInfo | null,
 ): DesiredOverlay[] {
   const desired: DesiredOverlay[] = [];
   const showPos = scope.tradingConfig.showPositions;
@@ -360,7 +394,38 @@ function buildDesiredOverlays(
       });
     });
   }
+
+  if (chartSymbol) {
+    const alertItems = scope.alertsState;
+    for (let i = 0; i < alertItems.length; i++) {
+      const alertItem = alertItems[i]!;
+      if (!ALERT_PRICE_TYPES.includes(alertItem.type)) continue;
+      const price = resolvedAlertPriceValue(alertItem);
+      if (price == null) continue;
+      if (!alertSymbolMatchesChartSymbol(alertItem, chartSymbol)) continue;
+      const idSuffix = safeOverlaySegment(alertItem.id || `idx_${i}`);
+      const id = `alert-${idSuffix}`;
+      const alertForOverlay: AlertItem = { ...alertItem, price };
+      const points = [{ timestamp: lastTs, value: price }];
+      const extendData: Record<string, unknown> = { alert: alertForOverlay, showInfo: false };
+      desired.push({
+        id,
+        name: "priceAlertLine",
+        points,
+        extendData,
+        signature: makeOverlaySignature("priceAlertLine", points, extendData),
+      });
+    }
+  }
+
   return desired;
+}
+
+function removeLegacyAlertOverlays(chart: Chart): void {
+  const legacy = chart.getOverlays({ groupId: "alert_overlays" }) ?? [];
+  legacy.forEach((o) => {
+    if (o.id) chart.removeOverlay({ id: o.id });
+  });
 }
 
 export function syncTradingOverlays(targetChart?: Chart | null): void {
@@ -368,9 +433,11 @@ export function syncTradingOverlays(targetChart?: Chart | null): void {
   const scope = resolveScope(resolvedChart);
   if (!resolvedChart) return;
   const chart = resolvedChart;
+  removeLegacyAlertOverlays(chart);
   const dataList = chart.getDataList();
   const lastTs = dataList.at(-1)?.timestamp ?? Date.now();
-  const desired = buildDesiredOverlays(scope, dataList, lastTs);
+  const chartSymbol = symbol() ?? null;
+  const desired = buildDesiredOverlays(scope, dataList, lastTs, chartSymbol);
   const desiredById = new Map(desired.map((item) => [item.id, item] as const));
   const existingByGroup = chart.getOverlays({ groupId: TRADING_OVERLAY_GROUP }) ?? [];
   const existingIdSet = new Set(existingByGroup.map((item) => item.id).filter((id): id is string => !!id));

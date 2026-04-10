@@ -83,9 +83,9 @@ export default class KlineChartPro implements ChartPro {
           mainIndicators={options.mainIndicators ?? ['MA']}
           subIndicators={options.subIndicators ?? ['VOL']}
           dataTimestamp={options.dataTimestamp ?? new Date().getTime()}
-          alerts={options.alerts ?? []}
           onAddAlert={options.onAddAlert ?? (() => true)}
           onRemoveAlert={options.onRemoveAlert ?? (() => true)}
+          alerts={options.alerts ?? []}
           rootElementId={options.rootElementId ?? this._container?.id ?? ''}
           dataloader={dataLoader} />
       ),
