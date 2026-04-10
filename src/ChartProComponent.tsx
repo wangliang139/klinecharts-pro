@@ -573,9 +573,11 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
     const t = theme()
     api.setStyles(t)
     const color = t === 'dark' ? '#929AA5' : '#76808F'
-    if (lastTooltipFeatureColor === color) return
-    lastTooltipFeatureColor = color
-    api.setStyles(buildTooltipFeatureStyles(color))
+    if (lastTooltipFeatureColor !== color) {
+      lastTooltipFeatureColor = color
+      api.setStyles(buildTooltipFeatureStyles(color))
+    }
+    syncTradingOverlays(chartApiRef ?? api)
   })
 
   createEffect(() => {

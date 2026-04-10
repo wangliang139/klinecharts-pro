@@ -1,11 +1,17 @@
-import { Coordinate, LineStyle, OverlayEvent, OverlayTemplate, utils } from "klinecharts";
+import { Coordinate, DomPosition, LineStyle, Nullable, OverlayEvent, OverlayTemplate, utils } from "klinecharts";
 
-import { formatWesternGrouped } from "../../helpers";
+import {
+  formatWesternGrouped,
+  getKlineProCssVariable,
+  KLINE_PRO_FALLBACK_PRICE_ALERT_LINE,
+  KLINE_PRO_VAR_PRICE_ALERT_LINE,
+  KLINE_PRO_VAR_PRICE_ALERT_MARKER,
+} from "../../helpers";
 import { AlertItem } from "../../types/types";
 import { ALERT_DETAIL_OPEN_EVENT } from "./constants";
 import { isPriceInVisibleCandleRange } from "./chartVisibleRange";
 
-const ALERT_LINE_COLOR = "#bfbfbf";
+const FALLBACK_PRICE_ALERT_MARKER = "#bfbfbf";
 
 type AlertExtendData = {
   alert: AlertItem;
@@ -65,10 +71,10 @@ export function setPriceAlertOverlayHandlers(handlers: { onRemove?: (alertItem: 
   removeHandler = handlers.onRemove;
 }
 
-const alertLineStyle = (): LineStyle => ({
+const alertLineStyle = (chart: { getDom: (paneId?: string, position?: DomPosition) => Nullable<HTMLElement> }): LineStyle => ({
   style: "dashed",
   size: 1,
-  color: "rgba(255, 255, 255, 1)",
+  color: getKlineProCssVariable(chart, KLINE_PRO_VAR_PRICE_ALERT_LINE, KLINE_PRO_FALLBACK_PRICE_ALERT_LINE),
   dashedValue: [4, 4],
 });
 
@@ -120,7 +126,7 @@ const priceAlertLine = (): OverlayTemplate => ({
             { x: lineEndX, y },
           ],
         },
-        styles: alertLineStyle(),
+        styles: alertLineStyle(chart),
         ignoreEvent: true,
       },
       {
@@ -133,7 +139,10 @@ const priceAlertLine = (): OverlayTemplate => ({
             { x: triangleBaseX, y: y + 6 },
           ],
         },
-        styles: { style: "fill", color: ALERT_LINE_COLOR },
+        styles: {
+          style: "fill",
+          color: getKlineProCssVariable(chart, KLINE_PRO_VAR_PRICE_ALERT_MARKER, FALLBACK_PRICE_ALERT_MARKER),
+        },
         ignoreEvent: false,
       },
     ];

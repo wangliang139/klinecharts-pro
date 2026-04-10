@@ -1,5 +1,6 @@
 import type { Chart } from "klinecharts";
 
+import { getKlineProCssVariable, KLINE_PRO_FALLBACK_PRICE_ALERT_LINE, KLINE_PRO_VAR_PRICE_ALERT_LINE } from "../helpers";
 import type { AlertItem, AlertType, HisOrder, PendingOrder, Position, SymbolInfo, TradingConfig } from "../types/types";
 import { instanceApi, symbol } from "./chartStore";
 
@@ -287,6 +288,7 @@ function buildDesiredOverlays(
   dataList: Array<{ timestamp: number; high?: number; low?: number }>,
   lastTs: number,
   chartSymbol: SymbolInfo | null,
+  chart: Chart,
 ): DesiredOverlay[] {
   const desired: DesiredOverlay[] = [];
   const showPos = scope.tradingConfig.showPositions;
@@ -407,7 +409,12 @@ function buildDesiredOverlays(
       const id = `alert-${idSuffix}`;
       const alertForOverlay: AlertItem = { ...alertItem, price };
       const points = [{ timestamp: lastTs, value: price }];
-      const extendData: Record<string, unknown> = { alert: alertForOverlay, showInfo: false };
+      const extendData: Record<string, unknown> = {
+        alert: alertForOverlay,
+        showInfo: false,
+        /** 参与 signature：解析后的预警线颜色随主题变，触发 overlay 更新以重绘 canvas */
+        themeKey: getKlineProCssVariable(chart, KLINE_PRO_VAR_PRICE_ALERT_LINE, KLINE_PRO_FALLBACK_PRICE_ALERT_LINE),
+      };
       desired.push({
         id,
         name: "priceAlertLine",
@@ -437,7 +444,7 @@ export function syncTradingOverlays(targetChart?: Chart | null): void {
   const dataList = chart.getDataList();
   const lastTs = dataList.at(-1)?.timestamp ?? Date.now();
   const chartSymbol = symbol() ?? null;
-  const desired = buildDesiredOverlays(scope, dataList, lastTs, chartSymbol);
+  const desired = buildDesiredOverlays(scope, dataList, lastTs, chartSymbol, chart);
   const desiredById = new Map(desired.map((item) => [item.id, item] as const));
   const existingByGroup = chart.getOverlays({ groupId: TRADING_OVERLAY_GROUP }) ?? [];
   const existingIdSet = new Set(existingByGroup.map((item) => item.id).filter((id): id is string => !!id));

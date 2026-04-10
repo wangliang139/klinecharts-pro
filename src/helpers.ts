@@ -1,5 +1,41 @@
-import { Chart, Nullable, Overlay, YAxis } from "klinecharts"
+import { Chart, DomPosition, Nullable, Overlay, YAxis } from "klinecharts"
 import { FontWeights } from "./types/types"
+
+/** 与 `base.less` 中变量名一致，供 canvas 内 overlay 与 trading overlay signature 共用 */
+export const KLINE_PRO_VAR_PRICE_ALERT_LINE = "--klinecharts-pro-price-alert-line-color"
+export const KLINE_PRO_VAR_PRICE_ALERT_MARKER = "--klinecharts-pro-price-alert-marker-color"
+
+/** 与 light 主题下 `--klinecharts-pro-price-alert-line-color` 默认一致，无 DOM/CSS 时的兜底 */
+export const KLINE_PRO_FALLBACK_PRICE_ALERT_LINE = "#76808F"
+
+function getKlineProScope(chart: {
+  getDom: (paneId?: string, position?: DomPosition) => Nullable<HTMLElement>;
+}): HTMLElement | null {
+  const paneDom = chart.getDom("candle_pane", "main");
+  if (!paneDom) return null;
+  return paneDom.closest(".klinecharts-pro") as HTMLElement | null;
+}
+
+/**
+ * 从 `.klinecharts-pro` 作用域读取 CSS 变量（已解析为可传给 canvas 的颜色字符串，如 `#76808f` / `rgb(...)`）。
+ * 无窗口或变量未定义时返回 fallback。
+ */
+export function getKlineProCssVariable(
+  chart: {
+    getDom: (paneId?: string, position?: DomPosition) => Nullable<HTMLElement>;
+  },
+  varName: string,
+  fallback: string,
+): string {
+  if (typeof window === "undefined" || typeof window.getComputedStyle !== "function") {
+    return fallback;
+  }
+  const scope = getKlineProScope(chart);
+  if (!scope) return fallback;
+  const raw = window.getComputedStyle(scope).getPropertyValue(varName).trim();
+  if (!raw) return fallback;
+  return raw;
+}
 
 /** 西式分组：千分位 `,`、小数 `.`（如 12,345.67） */
 export function formatWesternGrouped(value: number, fractionDigits: number): string {
