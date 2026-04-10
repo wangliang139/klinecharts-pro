@@ -2,8 +2,8 @@ import { Chart, DomPosition, Nullable, Overlay, YAxis } from "klinecharts"
 import { FontWeights } from "./types/types"
 
 /** 与 `base.less` 中变量名一致，供 canvas 内 overlay 与 trading overlay signature 共用 */
+/** 价格预警虚线与右侧三角箭头共用 */
 export const KLINE_PRO_VAR_PRICE_ALERT_LINE = "--klinecharts-pro-price-alert-line-color"
-export const KLINE_PRO_VAR_PRICE_ALERT_MARKER = "--klinecharts-pro-price-alert-marker-color"
 
 /** 与 light 主题下 `--klinecharts-pro-price-alert-line-color` 默认一致，无 DOM/CSS 时的兜底 */
 export const KLINE_PRO_FALLBACK_PRICE_ALERT_LINE = "#76808F"

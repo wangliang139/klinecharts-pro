@@ -11,8 +11,8 @@ body {
 }
 
 .chart-wrap {
-  width: 80%;
-  height: min(720px, calc(100vh - 24px));
+  width: 100%;
+  height: min(720px, calc(100vh));
   min-height: 300px;
   overscroll-behavior: contain;
   touch-action: none;

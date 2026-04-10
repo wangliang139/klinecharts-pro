@@ -5,13 +5,10 @@ import {
   getKlineProCssVariable,
   KLINE_PRO_FALLBACK_PRICE_ALERT_LINE,
   KLINE_PRO_VAR_PRICE_ALERT_LINE,
-  KLINE_PRO_VAR_PRICE_ALERT_MARKER,
 } from "../../helpers";
 import { AlertItem } from "../../types/types";
 import { ALERT_DETAIL_OPEN_EVENT } from "./constants";
 import { isPriceInVisibleCandleRange } from "./chartVisibleRange";
-
-const FALLBACK_PRICE_ALERT_MARKER = "#bfbfbf";
 
 type AlertExtendData = {
   alert: AlertItem;
@@ -71,10 +68,10 @@ export function setPriceAlertOverlayHandlers(handlers: { onRemove?: (alertItem: 
   removeHandler = handlers.onRemove;
 }
 
-const alertLineStyle = (chart: { getDom: (paneId?: string, position?: DomPosition) => Nullable<HTMLElement> }): LineStyle => ({
+const alertLineStyle = (color: string): LineStyle => ({
   style: "dashed",
   size: 1,
-  color: getKlineProCssVariable(chart, KLINE_PRO_VAR_PRICE_ALERT_LINE, KLINE_PRO_FALLBACK_PRICE_ALERT_LINE),
+  color,
   dashedValue: [4, 4],
 });
 
@@ -109,6 +106,7 @@ const priceAlertLine = (): OverlayTemplate => ({
     }
     const y =
       (chart.convertToPixel({ timestamp: last.timestamp, value: price }) as Partial<Coordinate>).y ?? coordinates[0].y;
+    const accentColor = getKlineProCssVariable(chart, KLINE_PRO_VAR_PRICE_ALERT_LINE, KLINE_PRO_FALLBACK_PRICE_ALERT_LINE);
     const precision = chart.getSymbol()?.pricePrecision ?? 2;
     const text = getAlertLineLabelText(alertItem, precision);
     const textW = utils.calcTextWidth(text);
@@ -126,7 +124,7 @@ const priceAlertLine = (): OverlayTemplate => ({
             { x: lineEndX, y },
           ],
         },
-        styles: alertLineStyle(chart),
+        styles: alertLineStyle(accentColor),
         ignoreEvent: true,
       },
       {
@@ -139,10 +137,7 @@ const priceAlertLine = (): OverlayTemplate => ({
             { x: triangleBaseX, y: y + 6 },
           ],
         },
-        styles: {
-          style: "fill",
-          color: getKlineProCssVariable(chart, KLINE_PRO_VAR_PRICE_ALERT_MARKER, FALLBACK_PRICE_ALERT_MARKER),
-        },
+        styles: { style: "fill", color: accentColor },
         ignoreEvent: false,
       },
     ];
