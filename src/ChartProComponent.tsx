@@ -618,15 +618,64 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
     if (!chartContainer) return
     if (!settingModalVisible() && !alertModalVisible() && !chartAlertDetail()) return
 
-    const lockChartScroll = (event: Event) => {
+    const canScrollWithinTarget = (target: EventTarget | null, deltaY: number): boolean => {
+      if (!target || !(target instanceof Element) || deltaY === 0) {
+        return false
+      }
+      let current: Element | null = target
+      while (current) {
+        const style = window.getComputedStyle(current)
+        const isScrollableY =
+          (style.overflowY === 'auto' || style.overflowY === 'scroll' || style.overflowY === 'overlay') &&
+          current.scrollHeight > current.clientHeight
+        if (isScrollableY) {
+          if (deltaY > 0) {
+            return current.scrollTop + current.clientHeight < current.scrollHeight
+          }
+          return current.scrollTop > 0
+        }
+        current = current.parentElement
+      }
+      return false
+    }
+
+    let lastTouchY: number | null = null
+
+    const handleTouchStart = (event: TouchEvent) => {
+      lastTouchY = event.touches.length > 0 ? event.touches[0].clientY : null
+    }
+
+    const lockChartScroll = (event: WheelEvent | TouchEvent) => {
+      if (event instanceof WheelEvent) {
+        if (canScrollWithinTarget(event.target, event.deltaY)) {
+          return
+        }
+      } else {
+        if (event.touches.length === 0) {
+          event.preventDefault()
+          event.stopPropagation()
+          return
+        }
+        const currentY = event.touches[0].clientY
+        if (lastTouchY != null) {
+          const deltaY = lastTouchY - currentY
+          if (canScrollWithinTarget(event.target, deltaY)) {
+            lastTouchY = currentY
+            return
+          }
+        }
+        lastTouchY = currentY
+      }
       event.preventDefault()
       event.stopPropagation()
     }
 
+    chartContainer.addEventListener('touchstart', handleTouchStart, { passive: true })
     chartContainer.addEventListener('wheel', lockChartScroll, { passive: false })
     chartContainer.addEventListener('touchmove', lockChartScroll, { passive: false })
 
     onCleanup(() => {
+      chartContainer.removeEventListener('touchstart', handleTouchStart)
       chartContainer.removeEventListener('wheel', lockChartScroll)
       chartContainer.removeEventListener('touchmove', lockChartScroll)
     })
