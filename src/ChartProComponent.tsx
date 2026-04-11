@@ -232,7 +232,6 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   let resizeRafId: number | null = null
   let isDisposed = false
   let lastTooltipFeatureColor: string | null = null
-  let widgetDefaultStylesCaptured = false
   let lastExternalStyles: ReturnType<typeof styles>
 
   const [indicatorSettingModalParams, setIndicatorSettingModalParams] = createSignal<IndicatorSettingParams>(DEFAULT_INDICATOR_SETTING_PARAMS)
@@ -517,9 +516,14 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
       } else {
         priceUnitDom.style.display = 'none'
       }
-      chart.setSymbol({ ...s, ticker: s!.ticker, pricePrecision: s?.pricePrecision ?? 2, volumePrecision: s?.volumePrecision ?? 0 })
+      chart.setSymbol({
+        ...s!,
+        pricePrecision: s?.pricePrecision ?? 2,
+        volumePrecision: s?.volumePrecision ?? 0,
+      } as PickPartial<KLineSymbolInfo, 'pricePrecision' | 'volumePrecision'>)
       chart.setPeriod(period()!)
       chart.setDataLoader(props.dataloader)
+      scheduleTradingOverlayResync()
     }
 
     const w = chartApiRef
@@ -527,6 +531,9 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
       const restoredIndicatorState = restoreIndicators(w, props.mainIndicators!, props.subIndicators!)
       setMainIndicators(restoredIndicatorState.mainIndicators)
       setSubIndicators(restoredIndicatorState.subIndicators as SubIndicatorMap)
+    }
+    if (chart) {
+      setWidgetDefaultStyles(lodashClone(chart.getStyles()))
     }
   })
 
@@ -553,6 +560,19 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
       (prev.symbol?.ticker !== s.ticker ||
         (prev.symbol?.pricePrecision ?? 2) !== (s.pricePrecision ?? 2) ||
         (prev.symbol?.volumePrecision ?? 0) !== (s.volumePrecision ?? 0))
+    /** ticker/精度不变时，展示或接入相关字段变化也需 setSymbol，避免图内文案/币种等滞后 */
+    const symbolDisplayMetaChanged =
+      prev !== undefined &&
+      prev.symbol?.ticker === s.ticker &&
+      (prev.symbol?.name !== s.name ||
+        prev.symbol?.shortName !== s.shortName ||
+        prev.symbol?.exchange !== s.exchange ||
+        prev.symbol?.market !== s.market ||
+        prev.symbol?.priceCurrency !== s.priceCurrency ||
+        prev.symbol?.type !== s.type ||
+        prev.symbol?.logo !== s.logo ||
+        prev.symbol?.dollarPerPip !== s.dollarPerPip)
+    const symbolBindingChanged = symbolKeyChanged || symbolDisplayMetaChanged
     const precisionChangedOnly =
       prev !== undefined &&
       prev.symbol?.ticker === s.ticker &&
@@ -567,15 +587,23 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
       api?.setPeriod(p)
     }
 
-    if (symbolKeyChanged) {
+    if (symbolBindingChanged) {
       api?.setSymbol({
         ...s,
         pricePrecision: s.pricePrecision ?? 2,
         volumePrecision: s.volumePrecision ?? 0,
       } as PickPartial<KLineSymbolInfo, 'pricePrecision' | 'volumePrecision'>)
+      if (chartApiRef && s) {
+        if (s.priceCurrency) {
+          priceUnitDom.innerHTML = s.priceCurrency.toLocaleUpperCase()
+          priceUnitDom.style.display = 'flex'
+        } else {
+          priceUnitDom.style.display = 'none'
+        }
+      }
     }
 
-    if (periodChanged || symbolKeyChanged) {
+    if (periodChanged || symbolBindingChanged) {
       scheduleTradingOverlayResync()
     }
 
@@ -585,7 +613,7 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
       api?.resize()
     }
 
-    syncTradingOverlays(instanceApi())
+    syncTradingOverlays(chartApiRef ?? api)
 
     return { symbol: s, period: p }
   })
@@ -604,7 +632,10 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
   })
 
   createEffect(() => {
-    instanceApi()?.setLocale(locale())
+    const api = instanceApi()
+    if (!api) return
+    api.setLocale(locale())
+    api.setTimezone(timezone().key)
   })
 
   createEffect(() => {
@@ -613,17 +644,6 @@ const ChartProComponent: Component<ChartProComponentProps> = props => {
     if (current.text !== text) {
       setTimezone({ ...current, text })
     }
-  })
-
-  createEffect(() => {
-    instanceApi()?.setTimezone(timezone().key)
-  })
-
-  createEffect(() => {
-    const api = instanceApi()
-    if (!api || widgetDefaultStylesCaptured) return
-    setWidgetDefaultStyles(lodashClone(api.getStyles()))
-    widgetDefaultStylesCaptured = true
   })
 
   createEffect(() => {

@@ -293,12 +293,8 @@ export const useChartState = () => {
             icons.push(features[2]);
             icons.push(features[3]);
 
-            return {
-              // name: `${indicatorName}_${id}`,
-              // calcParamsText: indicatorName,
-              features: icons,
-              // legends: []
-            };
+            // 仅覆盖 features；name / calcParamsText / legends 由库内默认逻辑生成（见 KLineChart IndicatorTooltipView）
+            return { features: icons } as IndicatorTooltipData;
           },
         },
         isStack,
